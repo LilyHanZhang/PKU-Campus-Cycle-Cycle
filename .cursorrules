@@ -1,0 +1,7 @@
+# Skills
+- ui-ux-pro-max
+- frontend-design
+- code-review
+
+# Rules
+在每次新增功能后都需要添加相应的基于pytest的单元测试用例，如有相关代码更新，也需要检查是否需要更新相应的测试用例，存放在tests/unit下。

@@ -1,0 +1,247 @@
+# 产品规格说明书：燕园易骑 (PKU Cycle-Recycle Hub)
+
+## 1. 项目概述
+**燕园易骑 (PKU Cycle-Recycle Hub)** 是一个校园自行车循环回收平台，旨在解决北京大学校园内废旧自行车堆积的问题。它将连接即将毕业离校的学生（需要处置自行车）和新生或其他师生（需要低廉的代步工具）。
+
+该平台将是一个公开访问的 Web 应用，具有持久且免费的云端存储（用于数据和图片），并支持实时匹配和库存状态跟踪。
+
+## 2. 目标用户
+* **供应方 (卖家/捐赠者)：** 即将毕业离校的学生。
+* **需求方 (买家)：** 刚入学的新生及校内其他有代步需求的师生。
+* **管理员 (Admin)：** 负责线下车辆存放、成色鉴定及核销的学生志愿者或校园管理人员。
+* **主负责人 (SuperAdmin)：** 项目的核心管理者，拥有指派或移除管理员的最高权限。
+
+## 3. 用户角色与权限 (Roles & Permissions)
+* **普通用户 (User):**
+  - 注册、登录（邮箱+密码）。
+  - 发布自行车（等待管理员审核）。
+  - 浏览已审核通过的自行车库存。
+  - 预约（锁定）在库自行车。
+  - 在个人中心查看自己的发布、预约记录。
+  - 在社区论坛发帖、评论、点赞。
+* **管理员 (Admin):**
+  - 拥有普通用户所有权限。
+  - 审核用户发布的自行车，批准或驳回。
+  - 管理所有自行车的状态（如手动下架、确认交易完成）。
+  - 设置可供线下交易的时间段。
+  - 在管理后台查看所有用户、车辆和交易记录。
+* **主负责人 (SuperAdmin):**
+  - 拥有管理员所有权限。
+  - 添加或移除管理员账号。
+  - **初始账号**: 邮箱 `2200017736@stu.pku.edu.cn`，密码 `pkucycle`。
+  - 可将 SuperAdmin 权限转让给其他用户。
+
+## 4. 核心功能 (Core Features)
+### 4.1 门户与宣传模块
+* **核心入口：** 清晰的"捐赠/出售"与"寻找座驾"两个主要按钮。
+* **项目愿景展示：** 实时展示回收数据（例如：已累计回收多少辆自行车，减少了多少千克金属浪费）。
+
+### 4.2 车辆回收模块 (供应方)
+* **车辆登记：** 毕业生上传照片，填写品牌、新旧程度（评分制），以及意向价格（可选择"免费捐赠"）。车辆初始状态为 **"待审核"**。
+* **管理员审核：** 管理员在后台审核车辆信息，审核通过后状态变为 **"已入库 (In-Stock)"**，并出现在公开市场中。
+* **线下预约：** 毕业生选择管理员设定的空闲时间段，前往指定地点交车。
+
+### 4.3 智能匹配与抢先预约 (需求方)
+* **搜索与筛选：** 用户可根据期望的价位、成色范围筛选合适的自行车。
+* **实时库存：** 用户浏览时，若某车辆已被他人预览或预订，系统将实时更新状态以避免冲突。
+* **预约线下试骑：** 用户选择心仪车辆后生成匹配凭证，即可前往线下试骑或提车。车辆状态变为 **"锁定中 (Locked)"**。
+* **防冲突机制：** 如果两名学生同时抢订同一辆车，系统将锁定给首位操作者，并提示另一名用户重新选择。
+
+### 4.4 社区反馈模块 (论坛)
+* **帖子列表：** 用户可发布对项目的建议、使用心得或问题，形成帖子。
+* **互动功能：** 其他用户可以对帖子进行 **评论** 和 **点赞**。
+
+### 4.5 个人中心与管理后台
+* **个人中心 (用户视图):**
+  - **我的发布:** 查看自己发布的车辆状态（待审核/已入库/已售出）。
+  - **我的预约:** 查看已预约车辆的匹配进度和历史交易记录。
+  - **账号设置:** 修改密码、查看个人角色。
+* **管理后台 (管理员/主负责人视图):**
+  - **用户管理:** (SuperAdmin) 添加/移除管理员，或将 SuperAdmin 权限转让。
+  - **车辆管理:** 审核新提交的车辆、管理所有车辆信息。
+  - **预约管理:** 查看和管理所有用户的预约时间段。
+  - **数据看板:** 查看平台所有历史交易记录和统计数据。
+
+## 5. 技术方案 (免费部署)
+
+### 5.1 技术栈
+* **前端框架:** **Next.js 16 (React)**，利用 App Router 和 Server Actions。
+* **UI 与样式:** **Tailwind CSS**，现代化、简洁的界面。
+* **后端框架:** **FastAPI**，高性能 Python Web 框架。
+* **数据库:** **Supabase** PostgreSQL（免费 500MB 存储）。
+* **存储:** **Supabase Storage**（用于存放自行车照片）。
+
+### 5.2 部署方案
+* **前端部署:** **Vercel**（免费无缝部署 Next.js 应用）。
+* **后端部署:** **Railway** 或 **Render**（免费容器托管 FastAPI 应用）。
+  - Railway: 每月 500 小时免费额度，活动时更多。
+  - Render: 每月 750 小时免费额度。
+* **数据库:** **Supabase**（免费云数据库，即用即启动）。
+
+### 5.3 环境变量配置
+```
+# Backend (.env)
+DATABASE_URL=postgresql://xxx.supabase.co:5432/postgres
+SUPABASE_URL=https://xxx.supabase.co
+SUPABASE_KEY=your-anon-key
+SECRET_KEY=your-jwt-secret-key
+
+# Frontend (.env.local)
+NEXT_PUBLIC_API_URL=https://your-backend.railway.app
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+
+## 6. 数据库模型 (Supabase PostgreSQL)
+
+### 6.1 Users 表
+```sql
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    name VARCHAR(100),
+    role VARCHAR(20) DEFAULT 'USER' CHECK (role IN ('USER', 'ADMIN', 'SUPER_ADMIN')),
+    avatar_url TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### 6.2 Bicycles 表
+```sql
+CREATE TABLE bicycles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_id UUID REFERENCES users(id),
+    brand VARCHAR(100) NOT NULL,
+    condition INTEGER CHECK (condition >= 1 AND condition <= 10),
+    price DECIMAL(10, 2) DEFAULT 0,
+    status VARCHAR(20) DEFAULT 'PENDING_APPROVAL' CHECK (status IN ('PENDING_APPROVAL', 'IN_STOCK', 'LOCKED', 'SOLD')),
+    image_url TEXT,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### 6.3 Appointments 表
+```sql
+CREATE TABLE appointments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id),
+    bicycle_id UUID REFERENCES bicycles(id),
+    type VARCHAR(20) CHECK (type IN ('drop-off', 'pick-up')),
+    status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED')),
+    appointment_time TIMESTAMP,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### 6.4 Posts 表
+```sql
+CREATE TABLE posts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    author_id UUID REFERENCES users(id),
+    title VARCHAR(200) NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### 6.5 Comments 表
+```sql
+CREATE TABLE comments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
+    author_id UUID REFERENCES users(id),
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### 6.6 Likes 表
+```sql
+CREATE TABLE likes (
+    post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT NOW(),
+    PRIMARY KEY (post_id, user_id)
+);
+```
+
+## 7. API 设计
+
+### 7.1 认证接口
+* `POST /auth/register` - 用户注册（邮箱+密码）
+* `POST /auth/login` - 用户登录，返回 JWT token
+* `POST /auth/logout` - 登出
+* `GET /auth/me` - 获取当前用户信息
+
+### 7.2 用户管理接口
+* `GET /users/` - 获取所有用户（Admin/SuperAdmin）
+* `PUT /users/{user_id}/role` - 修改用户角色（SuperAdmin）
+* `GET /users/{user_id}` - 获取指定用户信息
+
+### 7.3 自行车管理接口
+* `POST /bicycles/` - 创建自行车（需认证）
+* `GET /bicycles/` - 获取自行车列表（支持筛选）
+* `GET /bicycles/{bike_id}` - 获取自行车详情
+* `PUT /bicycles/{bike_id}` - 更新自行车信息
+* `PUT /bicycles/{bike_id}/approve` - 审核自行车（Admin）
+* `DELETE /bicycles/{bike_id}` - 删除自行车
+
+### 7.4 预约管理接口
+* `POST /appointments/` - 创建预约
+* `GET /appointments/user/{user_id}` - 获取用户预约
+* `PUT /appointments/{apt_id}` - 更新预约状态
+
+### 7.5 论坛接口
+* `POST /posts/` - 创建帖子
+* `GET /posts/` - 获取帖子列表
+* `POST /posts/{post_id}/comments` - 添加评论
+* `POST /posts/{post_id}/likes` - 点赞/取消点赞
+
+## 8. UI/UX 设计规范
+
+### 8.1 视觉风格
+* **主题色:** 环保绿 (Eco Green) `#1f874c` / `#2ab26a`
+* **风格方向:** 亲和卡通/插画风，轻松友好
+* **卡片设计:** 大卡片精细化展示，不采用拥挤的瀑布流
+
+### 8.2 页面结构
+* `/` - 首页（入口+数据展示）
+* `/bicycles` - 自行车库存浏览
+* `/bicycles/new` - 发布新自行车
+* `/profile` - 个人中心
+* `/forum` - 社区广场
+* `/admin` - 管理后台
+* `/login` - 登录页
+* `/register` - 注册页
+
+## 9. 开发阶段规划
+
+### Phase 1: 基础设施（已完成部分）
+- [x] Next.js 前端项目搭建
+- [x] FastAPI 后端框架
+- [x] 基础页面路由
+- [x] 内存数据库（测试用）
+
+### Phase 2: 核心功能（本阶段目标）
+- [ ] Supabase 项目创建和数据库配置
+- [ ] 用户认证系统（注册/登录/JWT）
+- [ ] 角色权限系统（User/Admin/SuperAdmin）
+- [ ] 持久化数据层
+- [ ] 前端登录/注册页面
+
+### Phase 3: 业务功能
+- [ ] 自行车 CRUD + 审核流程
+- [ ] 预约管理
+- [ ] 论坛功能（帖子/评论/点赞）
+- [ ] 管理后台完善
+
+### Phase 4: 部署上线
+- [ ] Vercel 前端部署
+- [ ] Railway/Render 后端部署
+- [ ] 域名绑定（如需要）

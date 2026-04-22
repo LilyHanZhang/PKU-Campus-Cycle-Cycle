@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import { User, Bike, Calendar, Shield, Trash2, Edit } from "lucide-react";
+import { User, Bike, Calendar, Shield, Trash2 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
@@ -97,6 +97,49 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleAddTimeSlot = async (bicycleId: string, appointmentType: string) => {
+    const token = localStorage.getItem("access_token");
+    const startTimeInput = prompt("请输入开始时间（格式：2024-01-01T10:00）:");
+    if (!startTimeInput) return;
+    
+    const endTimeInput = prompt("请输入结束时间（格式：2024-01-01T11:00）:");
+    if (!endTimeInput) return;
+
+    try {
+      await axios.post(
+        `${API_URL}/time_slots/`,
+        {
+          bicycle_id: bicycleId,
+          appointment_type: appointmentType,
+          start_time: new Date(startTimeInput).toISOString(),
+          end_time: new Date(endTimeInput).toISOString(),
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("时间段添加成功！");
+      fetchData();
+    } catch (err) {
+      console.error("Failed to add time slot", err);
+      alert("操作失败，请重试。");
+    }
+  };
+
+  const handleConfirmPickup = async (aptId: string) => {
+    const token = localStorage.getItem("access_token");
+    try {
+      await axios.put(
+        `${API_URL}/appointments/${aptId}/confirm-pickup`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("已确认提车！");
+      fetchData();
+    } catch (err) {
+      console.error("Failed to confirm pickup", err);
+      alert("操作失败，请重试。");
+    }
+  };
+
   if (authLoading || !user) {
     return <div className="min-h-screen bg-gray-100 flex items-center justify-center"><p>加载中...</p></div>;
   }
@@ -177,7 +220,7 @@ export default function AdminDashboard() {
                         <div>
                           <p className="font-bold text-gray-700">{bike.brand}</p>
                           <p className="text-sm text-gray-500">
-                            车主ID: {bike.owner_id?.substring(0, 8)}... | 价格: ¥{bike.price} | 成色: {bike.condition}/10
+                            车主 ID: {bike.owner_id?.substring(0, 8)}... | 价格：¥{bike.price} | 成色：{bike.condition}/10
                           </p>
                         </div>
                         <div className="flex space-x-2">
@@ -262,7 +305,7 @@ export default function AdminDashboard() {
                       <div>
                         <p className="font-bold text-gray-700">{bike.brand}</p>
                         <p className="text-sm text-gray-500">
-                          ¥{bike.price} | 成色 {bike.condition}/10 | 状态: {
+                          ¥{bike.price} | 成色 {bike.condition}/10 | 状态：{
                             bike.status === 'PENDING_APPROVAL' ? '待审核' :
                             bike.status === 'IN_STOCK' ? '在库' :
                             bike.status === 'LOCKED' ? '已锁定' : '已售出'
@@ -290,16 +333,42 @@ export default function AdminDashboard() {
                 </h2>
                 <div className="space-y-4">
                   {allAppointments.map((apt: any) => (
-                    <div key={apt.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="font-bold text-gray-700">预约ID: {apt.id.substring(0, 8)}...</p>
-                        <p className="text-sm text-gray-500">
-                          车辆ID: {apt.bicycle_id.substring(0, 8)}... | 类型: {apt.type === 'drop-off' ? '交车' : '提车'}
-                        </p>
+                    <div key={apt.id} className="p-4 bg-gray-50 rounded-lg">
+                      <div className="flex justify-between items-center mb-3">
+                        <div>
+                          <p className="font-bold text-gray-700">预约 ID: {apt.id.substring(0, 8)}...</p>
+                          <p className="text-sm text-gray-500">
+                            车辆 ID: {apt.bicycle_id.substring(0, 8)}... | 类型：{apt.type === 'drop-off' ? '交车' : '提车'}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            状态：<span className={`px-2 py-1 rounded text-xs font-bold ${
+                              apt.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                              apt.status === 'CONFIRMED' ? 'bg-blue-100 text-blue-700' :
+                              apt.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>{apt.status}</span>
+                          </p>
+                        </div>
+                        {apt.status === 'CONFIRMED' && (
+                          <button
+                            onClick={() => handleConfirmPickup(apt.id)}
+                            className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition"
+                          >
+                            确认提车
+                          </button>
+                        )}
                       </div>
-                      <span className="px-3 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-700">
-                        {apt.status}
-                      </span>
+                      
+                      {/* 时间段管理 */}
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <p className="text-sm font-bold text-gray-600 mb-2">时间段管理：</p>
+                        <button
+                          onClick={() => handleAddTimeSlot(apt.bicycle_id, apt.type)}
+                          className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-600 transition"
+                        >
+                          添加时间段
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

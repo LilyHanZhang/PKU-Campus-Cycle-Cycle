@@ -10,6 +10,15 @@ from ..auth import get_current_user, get_current_admin
 
 router = APIRouter(prefix="/time_slots", tags=["时间段管理"])
 
+@router.get("/", response_model=List[TimeSlotResponse])
+def list_time_slots(
+    current_user: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """管理员查看所有时间段"""
+    time_slots = db.query(TimeSlot).all()
+    return time_slots
+
 @router.post("/", response_model=TimeSlotResponse)
 def create_time_slot(
     time_slot: TimeSlotCreate,

@@ -335,3 +335,203 @@ def test_health_check(client):
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "healthy"
+
+def test_create_time_slot_as_admin(client, admin_token):
+    from datetime import datetime, timedelta
+    bike_response = client.post("/bicycles/", json={
+        "brand": "Test Bike",
+        "condition": 7,
+        "price": 50
+    }, headers={"Authorization": f"Bearer {admin_token}"})
+    bike_id = bike_response.json()["id"]
+    
+    start_time = datetime.now().isoformat()
+    end_time = (datetime.now() + timedelta(hours=1)).isoformat()
+    
+    time_slot_response = client.post("/time_slots/", json={
+        "bicycle_id": bike_id,
+        "appointment_type": "pick-up",
+        "start_time": start_time,
+        "end_time": end_time
+    }, headers={"Authorization": f"Bearer {admin_token}"})
+    
+    assert time_slot_response.status_code == 200
+    assert time_slot_response.json()["bicycle_id"] == bike_id
+
+def test_create_time_slot_as_user_fails(client, user_token):
+    from datetime import datetime, timedelta
+    bike_response = client.post("/bicycles/", json={
+        "brand": "Test Bike",
+        "condition": 7,
+        "price": 50
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    bike_id = bike_response.json()["id"]
+    
+    start_time = datetime.now().isoformat()
+    end_time = (datetime.now() + timedelta(hours=1)).isoformat()
+    
+    time_slot_response = client.post("/time_slots/", json={
+        "bicycle_id": bike_id,
+        "appointment_type": "pick-up",
+        "start_time": start_time,
+        "end_time": end_time
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    
+    assert time_slot_response.status_code == 403
+
+def test_confirm_delivery_for_seller(client, user_token, admin_token):
+    bike_response = client.post("/bicycles/", json={
+        "brand": "Seller Bike",
+        "condition": 8,
+        "price": 0
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    bike_id = bike_response.json()["id"]
+    
+    client.put(f"/bicycles/{bike_id}/approve", headers={"Authorization": f"Bearer {admin_token}"})
+    
+    apt_response = client.post("/appointments/", json={
+        "bicycle_id": bike_id,
+        "type": "drop-off"
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    apt_id = apt_response.json()["id"]
+    
+    confirm_response = client.put(f"/appointments/{apt_id}/confirm-pickup", headers={"Authorization": f"Bearer {admin_token}"})
+    assert confirm_response.status_code == 200
+    assert confirm_response.json()["status"] == "COMPLETED"
+
+def test_buyer_pickup_flow(client, user_token, admin_token):
+    from datetime import datetime, timedelta
+    bike_response = client.post("/bicycles/", json={
+        "brand": "Buyer Bike",
+        "condition": 7,
+        "price": 100
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    bike_id = bike_response.json()["id"]
+    
+    client.put(f"/bicycles/{bike_id}/approve", headers={"Authorization": f"Bearer {admin_token}"})
+    
+    apt_response = client.post("/appointments/", json={
+        "bicycle_id": bike_id,
+        "type": "pick-up"
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    apt_id = apt_response.json()["id"]
+    
+    start_time = datetime.now().isoformat()
+    end_time = (datetime.now() + timedelta(hours=1)).isoformat()
+    
+    time_slot_response = client.post("/time_slots/", json={
+        "bicycle_id": bike_id,
+        "appointment_type": "pick-up",
+        "start_time": start_time,
+        "end_time": end_time
+    }, headers={"Authorization": f"Bearer {admin_token}"})
+    time_slot_id = time_slot_response.json()["id"]
+    
+    select_response = client.put(f"/time_slots/select/{apt_id}?time_slot_id={time_slot_id}", headers={"Authorization": f"Bearer {user_token}"})
+    assert select_response.status_code == 200
+    
+    confirm_response = client.put(f"/appointments/{apt_id}/confirm-pickup", headers={"Authorization": f"Bearer {admin_token}"})
+    assert confirm_response.status_code == 200
+    assert confirm_response.json()["status"] == "COMPLETED"
+
+def test_confirm_pickup(client, user_token, admin_token):
+    bike_response = client.post("/bicycles/", json={
+        "brand": "Pickup Test",
+        "condition": 6,
+        "price": 75
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    bike_id = bike_response.json()["id"]
+    
+    client.put(f"/bicycles/{bike_id}/approve", headers={"Authorization": f"Bearer {admin_token}"})
+    
+    apt_response = client.post("/appointments/", json={
+        "bicycle_id": bike_id,
+        "type": "pick-up"
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    apt_id = apt_response.json()["id"]
+    
+    confirm_response = client.put(f"/appointments/{apt_id}/confirm-pickup", headers={"Authorization": f"Bearer {admin_token}"})
+    assert confirm_response.status_code == 200
+    assert confirm_response.json()["status"] == "COMPLETED"
+
+def test_create_review_after_pickup(client, user_token, admin_token):
+    bike_response = client.post("/bicycles/", json={
+        "brand": "Review Test",
+        "condition": 8,
+        "price": 90
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    bike_id = bike_response.json()["id"]
+    
+    client.put(f"/bicycles/{bike_id}/approve", headers={"Authorization": f"Bearer {admin_token}"})
+    
+    apt_response = client.post("/appointments/", json={
+        "bicycle_id": bike_id,
+        "type": "pick-up"
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    apt_id = apt_response.json()["id"]
+    
+    client.put(f"/appointments/{apt_id}/confirm-pickup", headers={"Authorization": f"Bearer {admin_token}"})
+    
+    review_response = client.post("/time_slots/reviews", json={
+        "appointment_id": apt_id,
+        "rating": 5,
+        "content": "Great service!",
+        "review_type": "buyer_review"
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    
+    assert review_response.status_code == 200
+    assert review_response.json()["rating"] == 5
+
+def test_delete_own_comment(client, user_token):
+    post_response = client.post("/posts/", json={
+        "title": "Test Post",
+        "content": "Hello"
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    post_id = post_response.json()["id"]
+    
+    comment_response = client.post(f"/posts/{post_id}/comments", json={
+        "content": "Test comment"
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    comment_id = comment_response.json()["id"]
+    
+    delete_response = client.delete(f"/posts/{post_id}/comments/{comment_id}", headers={"Authorization": f"Bearer {user_token}"})
+    assert delete_response.status_code == 200
+    assert delete_response.json()["message"] == "删除成功"
+
+def test_admin_can_delete_others_comment(client, user_token, admin_token):
+    post_response = client.post("/posts/", json={
+        "title": "Test Post",
+        "content": "Hello"
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    post_id = post_response.json()["id"]
+    
+    comment_response = client.post(f"/posts/{post_id}/comments", json={
+        "content": "Test comment"
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    comment_id = comment_response.json()["id"]
+    
+    delete_response = client.delete(f"/posts/{post_id}/comments/{comment_id}", headers={"Authorization": f"Bearer {admin_token}"})
+    assert delete_response.status_code == 200
+    assert delete_response.json()["message"] == "删除成功"
+
+def test_delete_own_post(client, user_token):
+    post_response = client.post("/posts/", json={
+        "title": "My Post",
+        "content": "To be deleted"
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    post_id = post_response.json()["id"]
+    
+    delete_response = client.delete(f"/posts/{post_id}", headers={"Authorization": f"Bearer {user_token}"})
+    assert delete_response.status_code == 200
+    assert delete_response.json()["message"] == "删除成功"
+
+def test_admin_can_delete_others_post(client, user_token, admin_token):
+    post_response = client.post("/posts/", json={
+        "title": "User Post",
+        "content": "Admin will delete"
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    post_id = post_response.json()["id"]
+    
+    delete_response = client.delete(f"/posts/{post_id}", headers={"Authorization": f"Bearer {admin_token}"})
+    assert delete_response.status_code == 200
+    assert delete_response.json()["message"] == "删除成功"

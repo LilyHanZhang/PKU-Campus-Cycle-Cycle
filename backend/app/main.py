@@ -31,8 +31,15 @@ def create_super_admin():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if engine is not None:
-        Base.metadata.create_all(bind=engine)
-        create_super_admin()
+        try:
+            Base.metadata.create_all(bind=engine)
+            print("✓ Database tables created successfully")
+        except Exception as e:
+            print(f"❌ Database error: {e}")
+        try:
+            create_super_admin()
+        except Exception as e:
+            print(f"❌ Create super admin error: {e}")
     yield
 
 app = FastAPI(

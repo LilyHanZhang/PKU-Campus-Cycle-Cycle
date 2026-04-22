@@ -169,24 +169,31 @@ def list_appointments(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    query = db.query(Appointment)
-    if current_user["role"] == "USER":
-        query = query.filter(Appointment.user_id == UUID(current_user["user_id"]))
-    if status:
-        query = query.filter(Appointment.status == status)
+    try:
+        query = db.query(Appointment)
+        if current_user["role"] == "USER":
+            query = query.filter(Appointment.user_id == UUID(current_user["user_id"]))
+        if status:
+            query = query.filter(Appointment.status == status)
 
-    appointments = query.all()
-    # 手动转换，避免 from_attributes 问题
-    return [AppointmentResponse(
-        id=apt.id,
-        user_id=apt.user_id,
-        bicycle_id=apt.bicycle_id,
-        type=apt.type,
-        appointment_time=apt.appointment_time,
-        notes=apt.notes,
-        status=apt.status,
-        created_at=apt.created_at
-    ) for apt in appointments]
+        appointments = query.all()
+        print(f"✓ Successfully fetched {len(appointments)} appointments")
+        # 手动转换，避免 from_attributes 问题
+        return [AppointmentResponse(
+            id=apt.id,
+            user_id=apt.user_id,
+            bicycle_id=apt.bicycle_id,
+            type=apt.type,
+            appointment_time=apt.appointment_time,
+            notes=apt.notes,
+            status=apt.status,
+            created_at=apt.created_at
+        ) for apt in appointments]
+    except Exception as e:
+        print(f"❌ Error in list_appointments: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
 
 @appointment_router.get("/user/{user_id}", response_model=List[AppointmentResponse])
 def get_user_appointments(

@@ -6,7 +6,7 @@ import os
 from .database import engine, Base
 from .models import User, Role
 from .auth import get_password_hash
-from .routers import users, bicycles, posts, time_slots
+from .routers import users, bicycles, posts
 
 def create_super_admin():
     from .database import SessionLocal
@@ -54,7 +54,6 @@ app.include_router(users.user_router)
 app.include_router(bicycles.router)
 app.include_router(bicycles.appointment_router)
 app.include_router(posts.router)
-app.include_router(time_slots.router)
 
 @app.get("/")
 def read_root():

@@ -169,11 +169,15 @@ def list_appointments(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    print(f"✓ current_user: {current_user}")
+    print(f"✓ role: {current_user.get('role')}")
     try:
         query = db.query(Appointment)
         if current_user["role"] == "USER":
+            print(f"   过滤用户预约：{current_user['user_id']}")
             query = query.filter(Appointment.user_id == UUID(current_user["user_id"]))
         if status:
+            print(f"   过滤状态：{status}")
             query = query.filter(Appointment.status == status)
 
         appointments = query.all()

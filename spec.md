@@ -44,12 +44,30 @@
 ### 4.3 智能匹配与抢先预约 (需求方)
 * **搜索与筛选：** 用户可根据期望的价位、成色范围筛选合适的自行车。
 * **实时库存：** 用户浏览时，若某车辆已被他人预览或预订，系统将实时更新状态以避免冲突。
-* **预约线下试骑：** 用户选择心仪车辆后生成匹配凭证，即可前往线下试骑或提车。车辆状态变为 **"锁定中 (Locked)"**。
+* **预约流程：**
+  1. 用户选择心仪车辆后创建预约申请，车辆状态变为 **"锁定中 (Locked)"**
+  2. 管理员查看预约申请，为该预约设置多个可选时间段
+  3. 用户从管理员提供的时间段中选择一个，确认预约时间
+  4. 线下提车/交付
+  5. 管理员确认提车完成，车辆状态更新
+  6. 用户可以对服务进行评价
 * **防冲突机制：** 如果两名学生同时抢订同一辆车，系统将锁定给首位操作者，并提示另一名用户重新选择。
 
-### 4.4 社区反馈模块 (论坛)
+### 4.4 时间段管理系统
+* **管理员设置时间段：** 管理员可以为特定预约创建多个可选时间段（开始时间、结束时间）
+* **用户选择时间段：** 用户从管理员提供的可用时间段中选择一个
+* **时间段状态：** 每个时间段有"未预订"和"已预订"两种状态
+* **预约类型：** 支持"drop-off"（卖家交车）和"pick-up"（买家提车）两种类型
+
+### 4.5 评价系统
+* **买家评价：** 买家提车后可以作为买家对服务进行评价（1-5 星 + 文字评论）
+* **卖家评价：** 卖家交车后可以作为卖家对服务进行评价（1-5 星 + 文字评论）
+* **评价展示：** 评价记录保存在数据库中，未来可在个人中心查看
+
+### 4.6 社区反馈模块 (论坛)
 * **帖子列表：** 用户可发布对项目的建议、使用心得或问题，形成帖子。
 * **互动功能：** 其他用户可以对帖子进行 **评论** 和 **点赞**。
+* **删除功能：** 发帖人可以删除自己的帖子和评论。
 
 ### 4.5 个人中心与管理后台
 * **个人中心 (用户视图):**
@@ -132,13 +150,40 @@ CREATE TABLE appointments (
     bicycle_id UUID REFERENCES bicycles(id),
     type VARCHAR(20) CHECK (type IN ('drop-off', 'pick-up')),
     status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED')),
+    time_slot_id UUID REFERENCES time_slots(id),
     appointment_time TIMESTAMP,
     notes TEXT,
     created_at TIMESTAMP DEFAULT NOW()
 );
 ```
 
-### 6.4 Posts 表
+### 6.4 TimeSlots 表
+```sql
+CREATE TABLE time_slots (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    bicycle_id UUID REFERENCES bicycles(id),
+    appointment_type VARCHAR(20) CHECK (appointment_type IN ('drop-off', 'pick-up')),
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP NOT NULL,
+    is_booked VARCHAR(10) DEFAULT 'false',
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### 6.5 Reviews 表
+```sql
+CREATE TABLE reviews (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    appointment_id UUID REFERENCES appointments(id),
+    reviewer_id UUID REFERENCES users(id),
+    rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+    content TEXT,
+    review_type VARCHAR(20) CHECK (review_type IN ('buyer_review', 'seller_review')),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### 6.6 Posts 表
 ```sql
 CREATE TABLE posts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -150,7 +195,7 @@ CREATE TABLE posts (
 );
 ```
 
-### 6.5 Comments 表
+### 6.7 Comments 表
 ```sql
 CREATE TABLE comments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -161,7 +206,7 @@ CREATE TABLE comments (
 );
 ```
 
-### 6.6 Likes 表
+### 6.8 Likes 表
 ```sql
 CREATE TABLE likes (
     post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
@@ -194,13 +239,24 @@ CREATE TABLE likes (
 
 ### 7.4 预约管理接口
 * `POST /appointments/` - 创建预约
+* `GET /appointments/` - 获取所有预约（管理员）/ 用户自己的预约（普通用户）
 * `GET /appointments/user/{user_id}` - 获取用户预约
 * `PUT /appointments/{apt_id}` - 更新预约状态
+* `POST /time_slots/` - 创建时间段（管理员）
+* `GET /time_slots/appointment/{apt_id}` - 获取预约的可选时间段
+* `PUT /appointments/{apt_id}/select-slot` - 用户选择时间段
+* `PUT /appointments/{apt_id}/confirm-pickup` - 管理员确认提车
+* `POST /reviews/` - 创建评价
 
 ### 7.5 论坛接口
 * `POST /posts/` - 创建帖子
 * `GET /posts/` - 获取帖子列表
+* `GET /posts/{post_id}` - 获取帖子详情
+* `PUT /posts/{post_id}` - 更新帖子
+* `DELETE /posts/{post_id}` - 删除帖子（作者或管理员）
 * `POST /posts/{post_id}/comments` - 添加评论
+* `GET /posts/{post_id}/comments` - 获取帖子评论列表
+* `DELETE /posts/{post_id}/comments/{comment_id}` - 删除评论（作者或管理员）
 * `POST /posts/{post_id}/likes` - 点赞/取消点赞
 
 ## 8. UI/UX 设计规范

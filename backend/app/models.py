@@ -60,6 +60,7 @@ class Bicycle(Base):
 
     owner = relationship("User", back_populates="bicycles")
     appointments = relationship("Appointment", back_populates="bicycle")
+    time_slots = relationship("TimeSlot", back_populates="bicycle")
 
 class Appointment(Base):
     __tablename__ = "appointments"
@@ -69,12 +70,14 @@ class Appointment(Base):
     bicycle_id = Column(UUID(as_uuid=True), ForeignKey("bicycles.id"))
     type = Column(String(20))
     status = Column(String(20), default=AppointmentStatus.PENDING.value)
+    time_slot_id = Column(UUID(as_uuid=True), ForeignKey("time_slots.id"), nullable=True)
     appointment_time = Column(DateTime)
     notes = Column(Text)
     created_at = Column(DateTime, server_default=func.now())
 
     user = relationship("User", back_populates="appointments")
     bicycle = relationship("Bicycle", back_populates="appointments")
+    time_slot = relationship("TimeSlot", back_populates="appointments")
 
 class Post(Base):
     __tablename__ = "posts"
@@ -111,3 +114,31 @@ class Like(Base):
 
     post = relationship("Post", back_populates="likes")
     user = relationship("User")
+
+class TimeSlot(Base):
+    __tablename__ = "time_slots"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    bicycle_id = Column(UUID(as_uuid=True), ForeignKey("bicycles.id"))
+    appointment_type = Column(String(20))
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=False)
+    is_booked = Column(String(10), default="false")
+    created_at = Column(DateTime, server_default=func.now())
+
+    bicycle = relationship("Bicycle", back_populates="time_slots")
+    appointments = relationship("Appointment", back_populates="time_slot")
+
+class Review(Base):
+    __tablename__ = "reviews"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    appointment_id = Column(UUID(as_uuid=True), ForeignKey("appointments.id"))
+    reviewer_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
+    rating = Column(Integer)
+    content = Column(Text)
+    review_type = Column(String(20))
+    created_at = Column(DateTime, server_default=func.now())
+
+    appointment = relationship("Appointment")
+    reviewer = relationship("User")

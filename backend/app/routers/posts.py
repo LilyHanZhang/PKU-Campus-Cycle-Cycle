@@ -168,7 +168,20 @@ def toggle_like(
         db.commit()
         return {"message": "点赞成功", "liked": True}
 
-@router.get("/{post_id}/likes/count")
-def get_like_count(post_id: UUID, db: Session = Depends(get_db)):
-    count = db.query(func.count(Like.post_id)).filter(Like.post_id == post_id).scalar() or 0
-    return {"count": count}
+@router.delete("/{post_id}/comments/{comment_id}")
+def delete_comment(
+    post_id: UUID,
+    comment_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    comment = db.query(Comment).filter(Comment.id == comment_id).first()
+    if not comment:
+        raise HTTPException(status_code=404, detail="评论不存在")
+
+    if str(comment.author_id) != current_user["user_id"] and current_user["role"] not in ["ADMIN", "SUPER_ADMIN"]:
+        raise HTTPException(status_code=403, detail="无权限删除")
+
+    db.delete(comment)
+    db.commit()
+    return {"message": "删除成功"}

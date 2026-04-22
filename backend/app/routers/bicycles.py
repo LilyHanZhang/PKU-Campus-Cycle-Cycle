@@ -220,3 +220,22 @@ def update_appointment(
     db.commit()
     db.refresh(appointment)
     return appointment
+
+@appointment_router.put("/{apt_id}/confirm-pickup", response_model=AppointmentResponse)
+def confirm_pickup(
+    apt_id: UUID,
+    current_user: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """管理员确认提车完成"""
+    appointment = db.query(Appointment).filter(Appointment.id == apt_id).first()
+    if not appointment:
+        raise HTTPException(status_code=404, detail="预约不存在")
+    
+    appointment.status = AppointmentStatus.COMPLETED.value
+    bike = db.query(Bicycle).filter(Bicycle.id == appointment.bicycle_id).first()
+    if bike:
+        bike.status = BicycleStatus.SOLD.value
+    db.commit()
+    db.refresh(appointment)
+    return appointment

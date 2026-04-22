@@ -79,6 +79,41 @@ class AppointmentResponse(AppointmentBase):
     id: UUID
     user_id: UUID
     status: str
+    time_slot_id: Optional[UUID] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class TimeSlotBase(BaseModel):
+    bicycle_id: UUID
+    appointment_type: str = Field(..., pattern="^(drop-off|pick-up)$")
+    start_time: datetime
+    end_time: datetime
+
+class TimeSlotCreate(TimeSlotBase):
+    pass
+
+class TimeSlotResponse(TimeSlotBase):
+    id: UUID
+    is_booked: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ReviewBase(BaseModel):
+    appointment_id: UUID
+    rating: int = Field(..., ge=1, le=5)
+    content: Optional[str] = None
+    review_type: str = Field(..., pattern="^(buyer_review|seller_review)$")
+
+class ReviewCreate(ReviewBase):
+    pass
+
+class ReviewResponse(ReviewBase):
+    id: UUID
+    reviewer_id: UUID
     created_at: datetime
 
     class Config:

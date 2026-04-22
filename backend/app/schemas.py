@@ -79,7 +79,6 @@ class AppointmentResponse(AppointmentBase):
     id: UUID
     user_id: UUID
     status: str
-    time_slot_id: Optional[UUID] = None
     created_at: datetime
 
     class Config:

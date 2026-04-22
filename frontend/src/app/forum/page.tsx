@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import { ThumbsUp, MessageCircle } from "lucide-react";
+import { ThumbsUp, MessageCircle, Trash2 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
@@ -17,12 +17,22 @@ interface Post {
   created_at: string;
 }
 
+interface Comment {
+  id: string;
+  author_id: string;
+  content: string;
+  created_at: string;
+}
+
 export default function ForumPage() {
   const { user, isAuthenticated } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [newPost, setNewPost] = useState({ title: "", content: "" });
   const [posting, setPosting] = useState(false);
+  const [expandedComments, setExpandedComments] = useState<{[key: string]: boolean}>({});
+  const [comments, setComments] = useState<{[key: string]: Comment[]}>({});
+  const [newComment, setNewComment] = useState<{[key: string]: string}>({});
 
   useEffect(() => {
     fetchPosts();
@@ -37,6 +47,22 @@ export default function ForumPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchComments = async (postId: string) => {
+    try {
+      const { data } = await axios.get(`${API_URL}/posts/${postId}/comments`);
+      setComments(prev => ({ ...prev, [postId]: data }));
+    } catch (error) {
+      console.error("Failed to fetch comments", error);
+    }
+  };
+
+  const toggleComments = (postId: string) => {
+    if (!expandedComments[postId]) {
+      fetchComments(postId);
+    }
+    setExpandedComments(prev => ({ ...prev, [postId]: !prev[postId] }));
   };
 
   const handlePostSubmit = async (e: React.FormEvent) => {
@@ -78,6 +104,69 @@ export default function ForumPage() {
       fetchPosts();
     } catch (error) {
       console.error("Failed to like post", error);
+    }
+  };
+
+  const handleAddComment = async (postId: string) => {
+    if (!isAuthenticated) {
+      alert("请先登录后再评论");
+      return;
+    }
+    const content = newComment[postId]?.trim();
+    if (!content) return;
+
+    const token = localStorage.getItem("access_token");
+    try {
+      await axios.post(
+        `${API_URL}/posts/${postId}/comments`,
+        { content },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setNewComment(prev => ({ ...prev, [postId]: "" }));
+      fetchComments(postId);
+      fetchPosts();
+    } catch (error) {
+      console.error("Failed to add comment", error);
+      alert("评论失败，请重试");
+    }
+  };
+
+  const handleDeleteComment = async (postId: string, commentId: string) => {
+    if (!isAuthenticated) {
+      alert("请先登录");
+      return;
+    }
+    const token = localStorage.getItem("access_token");
+    try {
+      await axios.delete(
+        `${API_URL}/posts/${postId}/comments/${commentId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchComments(postId);
+      fetchPosts();
+    } catch (error) {
+      console.error("Failed to delete comment", error);
+      alert("删除失败");
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (!isAuthenticated) {
+      alert("请先登录");
+      return;
+    }
+    if (!confirm("确定要删除这个帖子吗？")) return;
+    
+    const token = localStorage.getItem("access_token");
+    try {
+      await axios.delete(
+        `${API_URL}/posts/${postId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchPosts();
+    } catch (error) {
+      console.error("Failed to delete post", error);
+      alert("删除失败");
     }
   };
 
@@ -133,10 +222,21 @@ export default function ForumPage() {
           ) : posts.length > 0 ? (
             posts.map(post => (
               <div key={post.id} className="bg-white rounded-2xl shadow-lg p-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-2">{post.title}</h3>
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="text-xl font-bold text-gray-800">{post.title}</h3>
+                  {isAuthenticated && str(post.author_id) === user?.id && (
+                    <button
+                      onClick={() => handleDeletePost(post.id)}
+                      className="text-red-500 hover:text-red-700 transition"
+                      title="删除帖子"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
+                </div>
                 <p className="text-gray-600 mb-4">{post.content}</p>
                 <div className="flex items-center justify-between text-gray-500 border-t pt-4">
-                  <span className="text-xs font-medium">发布者: {post.author_id?.substring(0, 8)}...</span>
+                  <span className="text-xs font-medium">发布者：{post.author_id?.substring(0, 8)}...</span>
                   <div className="flex items-center space-x-4">
                     <button
                       onClick={() => handleLike(post.id)}
@@ -145,12 +245,68 @@ export default function ForumPage() {
                       <ThumbsUp size={18} />
                       <span>{post.like_count || 0}</span>
                     </button>
-                    <div className="flex items-center space-x-1 text-gray-400">
+                    <button
+                      onClick={() => toggleComments(post.id)}
+                      className="flex items-center space-x-1 hover:text-emerald-500 transition"
+                    >
                       <MessageCircle size={18} />
                       <span>{post.comment_count || 0}</span>
-                    </div>
+                    </button>
                   </div>
                 </div>
+
+                {/* 评论区 */}
+                {expandedComments[post.id] && (
+                  <div className="mt-4 pt-4 border-t">
+                    <h4 className="font-bold text-gray-700 mb-3">评论</h4>
+                    
+                    {/* 评论列表 */}
+                    <div className="space-y-3 mb-4">
+                      {comments[post.id]?.map((comment: Comment) => (
+                        <div key={comment.id} className="bg-gray-50 rounded-lg p-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="text-sm text-gray-600 mb-1">
+                                {comment.author_id?.substring(0, 8)}...
+                              </p>
+                              <p className="text-gray-700">{comment.content}</p>
+                            </div>
+                            {isAuthenticated && str(comment.author_id) === user?.id && (
+                              <button
+                                onClick={() => handleDeleteComment(post.id, comment.id)}
+                                className="text-red-500 hover:text-red-700 text-sm"
+                              >
+                                删除
+                              </button>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-400 mt-2">
+                            {new Date(comment.created_at).toLocaleString('zh-CN')}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* 添加评论 */}
+                    {isAuthenticated && (
+                      <div className="flex space-x-2">
+                        <input
+                          type="text"
+                          placeholder="写下你的评论..."
+                          value={newComment[post.id] || ""}
+                          onChange={(e) => setNewComment(prev => ({ ...prev, [post.id]: e.target.value }))}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                        />
+                        <button
+                          onClick={() => handleAddComment(post.id)}
+                          className="bg-[#2ab26a] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#1f874c] transition"
+                        >
+                          评论
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))
           ) : (
@@ -160,4 +316,8 @@ export default function ForumPage() {
       </div>
     </div>
   );
+}
+
+function str(id: string | undefined): string {
+  return id || "";
 }

@@ -1,7 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 from contextlib import asynccontextmanager
 import os
+import traceback
 
 from .database import engine, Base
 from .models import User, Role
@@ -69,3 +71,26 @@ def read_root():
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
+
+# 全局异常处理器
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    print(f"\n{'='*70}")
+    print(f"❌ GLOBAL EXCEPTION CAUGHT!")
+    print(f"Path: {request.url.path}")
+    print(f"Method: {request.method}")
+    print(f"Exception type: {type(exc).__name__}")
+    print(f"Exception: {exc}")
+    print(f"\nTraceback:")
+    traceback.print_exc()
+    print(f"{'='*70}\n")
+    
+    return PlainTextResponse(
+        content=f"Internal Server Error: {str(exc)}",
+        status_code=500,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )

@@ -70,14 +70,12 @@ class Appointment(Base):
     bicycle_id = Column(UUID(as_uuid=True), ForeignKey("bicycles.id"))
     type = Column(String(20))
     status = Column(String(20), default=AppointmentStatus.PENDING.value)
-    time_slot_id = Column(UUID(as_uuid=True), ForeignKey("time_slots.id"), nullable=True)
     appointment_time = Column(DateTime)
     notes = Column(Text)
     created_at = Column(DateTime, server_default=func.now())
 
     user = relationship("User", back_populates="appointments")
     bicycle = relationship("Bicycle", back_populates="appointments")
-    time_slot = relationship("TimeSlot", back_populates="appointments")
 
 class Post(Base):
     __tablename__ = "posts"
@@ -127,7 +125,6 @@ class TimeSlot(Base):
     created_at = Column(DateTime, server_default=func.now())
 
     bicycle = relationship("Bicycle", back_populates="time_slots")
-    appointments = relationship("Appointment", back_populates="time_slot")
 
 class Review(Base):
     __tablename__ = "reviews"

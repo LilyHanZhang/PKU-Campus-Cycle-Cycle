@@ -8,7 +8,7 @@
   "run": {
     "command": "uvicorn app.main:app --host 0.0.0.0 --port $PORT",
     "env": {
-      "DATABASE_URL": "postgresql://user:password@host:5432/dbname"
+      "DATABASE_URL": "postgresql://pku_cycle_db_qre8_user:xlZcWErBt7G5AVOq1ZjXLlv8v0K7v4wj@dpg-d7j3f3l7vvec73ahgetg-a.oregon-postgres.render.com/pku_cycle_db_qre8"
     }
   }
 }

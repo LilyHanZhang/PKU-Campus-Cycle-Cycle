@@ -176,7 +176,17 @@ def list_appointments(
         query = query.filter(Appointment.status == status)
 
     appointments = query.all()
-    return appointments
+    # 手动转换，避免 from_attributes 问题
+    return [AppointmentResponse(
+        id=apt.id,
+        user_id=apt.user_id,
+        bicycle_id=apt.bicycle_id,
+        type=apt.type,
+        appointment_time=apt.appointment_time,
+        notes=apt.notes,
+        status=apt.status,
+        created_at=apt.created_at
+    ) for apt in appointments]
 
 @appointment_router.get("/user/{user_id}", response_model=List[AppointmentResponse])
 def get_user_appointments(

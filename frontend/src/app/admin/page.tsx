@@ -5,6 +5,10 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { User, Bike, Calendar, Shield, Trash2 } from "lucide-react";
 
+// 强制动态渲染
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // 生产环境 API 地址
 const API_URL = "https://pku-campus-cycle-cycle.onrender.com";
 
@@ -532,12 +536,44 @@ export default function AdminDashboard() {
     }
   };
 
-  if (authLoading || !user) {
-    return <div className="min-h-screen bg-gray-100 flex items-center justify-center"><p>加载中...</p></div>;
+  // 显示加载状态
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">正在加载管理后台...</p>
+        </div>
+      </div>
+    );
   }
 
+  // 用户未登录
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">请先登录</p>
+          <Link href="/login" className="text-green-600 font-bold hover:underline">
+            前往登录
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // 用户没有权限
   if (user.role === "USER") {
-    return <div className="min-h-screen bg-gray-100 flex items-center justify-center"><p>您没有权限访问此页面</p></div>;
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">您没有权限访问此页面</p>
+          <Link href="/" className="text-green-600 font-bold hover:underline">
+            返回首页
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -310,3 +310,18 @@ def reject_appointment(
     db.refresh(appointment)
     # TODO: 发送通知给用户（可以通过私信系统）
     return appointment
+
+@router.get("/stats/summary")
+def get_statistics(db: Session = Depends(get_db)):
+    """获取平台统计数据"""
+    total_bicycles = db.query(Bicycle).count()
+    sold_bicycles = db.query(Bicycle).filter(Bicycle.status == BicycleStatus.SOLD.value).count()
+    in_stock_bicycles = db.query(Bicycle).filter(Bicycle.status == BicycleStatus.IN_STOCK.value).count()
+    total_users = db.query(User).count()
+    
+    return {
+        "total_bicycles": total_bicycles,
+        "sold_bicycles": sold_bicycles,
+        "in_stock_bicycles": in_stock_bicycles,
+        "total_users": total_users
+    }

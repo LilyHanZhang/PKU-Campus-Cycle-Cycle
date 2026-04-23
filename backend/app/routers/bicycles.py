@@ -510,7 +510,11 @@ def confirm_pickup(
         bike.status = BicycleStatus.SOLD.value
     db.commit()
     db.refresh(appointment)
-    return appointment
+    
+    return {
+        "message": "买家取车确认成功，交易完成",
+        "appointment": appointment
+    }
 
 @appointment_router.put("/{apt_id}/cancel", response_model=AppointmentResponse)
 def cancel_appointment(

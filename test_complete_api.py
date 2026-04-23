@@ -109,6 +109,31 @@ class APITester:
         else:
             print(f"✗ Failed: {response.text}")
             return False
+        
+        # Admin approves bicycle
+        print("\n   Admin approves bicycle...")
+        response = requests.put(
+            f"{BASE_URL}/bicycles/{self.bike_id}/approve",
+            headers={"Authorization": f"Bearer {self.admin_token}"}
+        )
+        if response.status_code == 200:
+            print(f"✓ Bicycle approved (Status: {response.json()['status']})")
+        else:
+            print(f"✗ Failed to approve: {response.text}")
+            return False
+            
+        # User creates appointment (drop-off = seller flow)
+        print("\n   User creates appointment (drop-off)...")
+        response = requests.post(
+            f"{BASE_URL}/appointments/",
+            json={"bicycle_id": self.bike_id, "type": "drop-off"},
+            headers={"Authorization": f"Bearer {self.user_token}"}
+        )
+        if response.status_code == 200:
+            print(f"✓ Appointment created")
+        else:
+            print(f"✗ Failed to create appointment: {response.text}")
+            return False
             
         # Step 2: Admin proposes time slots
         print("\n2️⃣ Admin proposes time slots...")
@@ -208,12 +233,42 @@ class APITester:
         print("🛒 TESTING BUYER FLOW")
         print("="*70)
         
+        # Step 0: Admin creates bicycle for buyer flow
+        print("\n0️⃣ Admin creates bicycle for buyer...")
+        response = requests.post(
+            f"{BASE_URL}/bicycles/",
+            json={
+                "brand": "Test Bike - Buyer Flow",
+                "condition": 7,
+                "price": 150
+            },
+            headers={"Authorization": f"Bearer {self.admin_token}"}
+        )
+        
+        if response.status_code == 200:
+            buyer_bike_id = response.json()["id"]
+            print(f"✓ Bicycle created (ID: {buyer_bike_id}, Status: {response.json()['status']})")
+            
+            # Admin approves
+            response = requests.put(
+                f"{BASE_URL}/bicycles/{buyer_bike_id}/approve",
+                headers={"Authorization": f"Bearer {self.admin_token}"}
+            )
+            if response.status_code == 200:
+                print(f"✓ Bicycle approved (Status: {response.json()['status']})")
+            else:
+                print(f"✗ Failed to approve: {response.text}")
+                return False
+        else:
+            print(f"✗ Failed to create bicycle: {response.text}")
+            return False
+        
         # Step 1: User creates appointment
         print("\n1️⃣ Buyer creates appointment...")
         response = requests.post(
             f"{BASE_URL}/appointments/",
             json={
-                "bicycle_id": self.bike_id,
+                "bicycle_id": buyer_bike_id,
                 "type": "pick-up"
             },
             headers={"Authorization": f"Bearer {self.user_token}"}
@@ -232,7 +287,7 @@ class APITester:
         end_time = datetime.now() + timedelta(hours=2)
         
         response = requests.post(
-            f"{BASE_URL}/appointments/{self.appointment_id}/propose-slots",
+            f"{BASE_URL}/bicycles/{buyer_bike_id}/propose-slots",
             json=[
                 {"start_time": start_time.isoformat(), "end_time": end_time.isoformat()}
             ],
@@ -248,7 +303,7 @@ class APITester:
         # Step 3: User selects time slot
         print("\n3️⃣ Buyer selects time slot...")
         response = requests.get(
-            f"{BASE_URL}/time_slots/appointment/{self.appointment_id}",
+            f"{BASE_URL}/time_slots/bicycle/{buyer_bike_id}",
             headers={"Authorization": f"Bearer {self.user_token}"}
         )
         
@@ -256,7 +311,7 @@ class APITester:
             time_slot_id = response.json()[0]["id"]
             
             response = requests.put(
-                f"{BASE_URL}/time_slots/select/{self.appointment_id}",
+                f"{BASE_URL}/time_slots/select-bicycle/{buyer_bike_id}",
                 json={"time_slot_id": time_slot_id},
                 headers={"Authorization": f"Bearer {self.user_token}"}
             )
@@ -272,8 +327,8 @@ class APITester:
             
         # Step 4: Admin confirms time slot (CRITICAL STEP)
         print("\n4️⃣ Admin confirms time slot ⭐...")
-        response = requests.put(
-            f"{BASE_URL}/time_slots/confirm/{self.appointment_id}",
+        response = requests.post(
+            f"{BASE_URL}/bicycles/{buyer_bike_id}/confirm",
             headers={"Authorization": f"Bearer {self.admin_token}"}
         )
         
@@ -281,24 +336,49 @@ class APITester:
             print(f"✓ Admin confirmed time slot")
             print(f"   Message: {response.json()['message']}")
             
-            # Check appointment status from the list
+            # Check bike status
             response = requests.get(
-                f"{BASE_URL}/appointments/",
+                f"{BASE_URL}/bicycles/{buyer_bike_id}",
                 headers={"Authorization": f"Bearer {self.admin_token}"}
             )
             if response.status_code == 200:
-                appointments = response.json()
-                apt = next((a for a in appointments if a['id'] == str(self.appointment_id)), None)
-                if apt:
-                    print(f"   Appointment status: {apt['status']}")
-                    if apt["status"] == "CONFIRMED":
-                        print(f"✓ Status correctly changed to CONFIRMED")
-                    else:
-                        print(f"✗ Status should be CONFIRMED but is {apt['status']}")
+                bike_status = response.json()["status"]
+                print(f"   Bike status: {bike_status}")
+                if bike_status == "RESERVED":
+                    print(f"✓ Status correctly changed to RESERVED")
                 else:
-                    print(f"✗ Appointment not found in list")
+                    print(f"✗ Status should be RESERVED but is {bike_status}")
             else:
-                print(f"✗ Failed to get appointments: {response.text}")
+                print(f"✗ Failed to get bike status: {response.text}")
+        else:
+            print(f"✗ Failed: {response.text}")
+            return False
+        
+        # Step 5: Admin confirms pickup (buyer flow completion)
+        print("\n5️⃣ Admin confirms pickup (buyer flow completion) ⭐...")
+        response = requests.put(
+            f"{BASE_URL}/appointments/{self.appointment_id}/confirm-pickup",
+            headers={"Authorization": f"Bearer {self.admin_token}"}
+        )
+        
+        if response.status_code == 200:
+            print(f"✓ Admin confirmed pickup")
+            print(f"   Message: {response.json()['message']}")
+            
+            # Check bike status
+            response = requests.get(
+                f"{BASE_URL}/bicycles/{buyer_bike_id}",
+                headers={"Authorization": f"Bearer {self.admin_token}"}
+            )
+            if response.status_code == 200:
+                bike_status = response.json()["status"]
+                print(f"   Bike status: {bike_status}")
+                if bike_status == "SOLD":
+                    print(f"✓ Status correctly changed to SOLD")
+                else:
+                    print(f"✗ Status should be SOLD but is {bike_status}")
+            else:
+                print(f"✗ Failed to get bike status: {response.text}")
         else:
             print(f"✗ Failed: {response.text}")
             return False

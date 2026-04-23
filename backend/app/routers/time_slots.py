@@ -196,13 +196,30 @@ def select_bicycle_time_slot(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """卖家选择时间段，等待管理员确认（卖家场景）"""
+    """用户选择时间段，等待管理员确认（卖家和买家场景）"""
+    from ..models import Appointment
+    from uuid import UUID
+    
     bicycle = db.query(Bicycle).filter(Bicycle.id == bike_id).first()
     if not bicycle:
         raise HTTPException(status_code=404, detail="自行车不存在")
     
-    # 验证是自行车所有者
-    if str(bicycle.owner_id) != current_user["user_id"]:
+    # 验证权限：自行车所有者或有预约的用户
+    current_user_id = UUID(current_user["user_id"]) if isinstance(current_user["user_id"], str) else current_user["user_id"]
+    
+    has_permission = (bicycle.owner_id == current_user_id)
+    
+    # 检查用户是否有该自行车的待处理预约
+    if not has_permission:
+        user_appointment = db.query(Appointment).filter(
+            Appointment.bicycle_id == bike_id,
+            Appointment.user_id == current_user_id,
+            Appointment.status == "PENDING"
+        ).first()
+        if user_appointment:
+            has_permission = True
+    
+    if not has_permission:
         raise HTTPException(status_code=403, detail="无权限修改此自行车")
     
     time_slot = db.query(TimeSlot).filter(TimeSlot.id == selection.time_slot_id).first()

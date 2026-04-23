@@ -465,14 +465,46 @@ export default function AdminDashboard() {
     const token = localStorage.getItem("access_token");
     try {
       await axios.put(
-        `${API_URL}/appointments/${aptId}/confirm-pickup`,
+        `${API_URL}/time_slots/confirm/${aptId}`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert("已确认提车！");
+      alert("已确认时间段！");
       fetchData();
     } catch (err) {
-      console.error("Failed to confirm pickup", err);
+      console.error("Failed to confirm time slot", err);
+      alert("操作失败，请重试。");
+    }
+  };
+
+  const handleConfirmBicycle = async (bikeId: string) => {
+    const token = localStorage.getItem("access_token");
+    try {
+      await axios.post(
+        `${API_URL}/bicycles/${bikeId}/confirm`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("已确认自行车交易！");
+      fetchData();
+    } catch (err) {
+      console.error("Failed to confirm bicycle", err);
+      alert("操作失败，请重试。");
+    }
+  };
+
+  const handleStoreInInventory = async (bikeId: string) => {
+    const token = localStorage.getItem("access_token");
+    try {
+      await axios.put(
+        `${API_URL}/bicycles/${bikeId}/store-inventory`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("自行车已存入库存！");
+      fetchData();
+    } catch (err) {
+      console.error("Failed to store bicycle", err);
       alert("操作失败，请重试。");
     }
   };
@@ -568,14 +600,18 @@ export default function AdminDashboard() {
             {activeTab === "dashboard" && dashboardData && (
               <div className="space-y-6">
                 {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl shadow-xl p-6">
                     <h3 className="text-lg font-bold mb-2">待处理自行车登记</h3>
                     <p className="text-4xl font-extrabold">{dashboardData.pending_bicycles_count}</p>
                   </div>
                   <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-2xl shadow-xl p-6">
-                    <h3 className="text-lg font-bold mb-2">待处理预约</h3>
+                    <h3 className="text-lg font-bold mb-2">等待确认预约</h3>
                     <p className="text-4xl font-extrabold">{dashboardData.pending_appointments_count}</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white rounded-2xl shadow-xl p-6">
+                    <h3 className="text-lg font-bold mb-2">等待确认自行车</h3>
+                    <p className="text-4xl font-extrabold">{dashboardData.waiting_bicycles ? dashboardData.waiting_bicycles.length : 0}</p>
                   </div>
                   <div className="bg-gradient-to-br from-orange-500 to-orange-600 text-white rounded-2xl shadow-xl p-6">
                     <h3 className="text-lg font-bold mb-2">已锁定时间段</h3>
@@ -619,6 +655,54 @@ export default function AdminDashboard() {
                 )}
 
                 {/* Pending Appointments List */}
+                {dashboardData.waiting_appointments && dashboardData.waiting_appointments.length > 0 && (
+                  <div className="bg-white rounded-2xl shadow-xl p-6">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">⏳ 等待确认的预约（买家已选时间段）</h2>
+                    <div className="space-y-3">
+                      {dashboardData.waiting_appointments.map((apt: any) => (
+                        <div key={apt.id} className="p-4 bg-gray-50 rounded-lg flex justify-between items-center">
+                          <div>
+                            <p className="font-bold text-gray-800">预约 ID: {apt.id.slice(0, 8)}...</p>
+                            <p className="text-sm text-gray-500">类型：{apt.type === 'pick-up' ? '取车' : '还车'}</p>
+                            <p className="text-sm text-gray-500">时间段 ID: {apt.time_slot_id?.slice(0, 8)}...</p>
+                          </div>
+                          <button
+                            onClick={() => handleConfirmPickup(apt.id)}
+                            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-bold"
+                          >
+                            ✓ 确认时间段
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Waiting Bicycles List */}
+                {dashboardData.waiting_bicycles && dashboardData.waiting_bicycles.length > 0 && (
+                  <div className="bg-white rounded-2xl shadow-xl p-6">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">⏳ 等待确认的自行车（卖家已选时间段）</h2>
+                    <div className="space-y-3">
+                      {dashboardData.waiting_bicycles.map((bike: any) => (
+                        <div key={bike.id} className="p-4 bg-gray-50 rounded-lg flex justify-between items-center">
+                          <div>
+                            <p className="font-bold text-gray-800">{bike.brand}</p>
+                            <p className="text-sm text-gray-500">ID: {bike.id.slice(0, 8)}...</p>
+                            <p className="text-sm text-gray-500">时间段 ID: {bike.time_slot_id?.slice(0, 8)}...</p>
+                          </div>
+                          <button
+                            onClick={() => handleConfirmBicycle(bike.id)}
+                            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-bold"
+                          >
+                            ✓ 确认交易
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pending Appointments List (old name for backward compatibility) */}
                 {dashboardData.pending_appointments.length > 0 && (
                   <div className="bg-white rounded-2xl shadow-xl p-6">
                     <h2 className="text-2xl font-bold text-gray-800 mb-4">待处理预约</h2>
@@ -745,22 +829,33 @@ export default function AdminDashboard() {
                   {allBikes.map((bike: any) => (
                     <div key={bike.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
                       <div>
-                        <p className="font-bold text-gray-700">{bike.brand}</p>
-                        <p className="text-sm text-gray-500">
-                          ¥{bike.price} | 成色 {bike.condition}/10 | 状态：{
-                            bike.status === 'PENDING_APPROVAL' ? '待审核' :
-                            bike.status === 'IN_STOCK' ? '在库' :
-                            bike.status === 'LOCKED' ? '已锁定' : '已售出'
-                          }
-                        </p>
-                      </div>
-                      <span className={`px-3 py-1 text-xs font-bold rounded-full ${
-                        bike.status === 'IN_STOCK' ? 'bg-green-100 text-green-700' :
-                        bike.status === 'PENDING_APPROVAL' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-gray-200 text-gray-600'
-                      }`}>
-                        {bike.status}
-                      </span>
+                            <p className="font-bold text-gray-700">{bike.brand}</p>
+                            <p className="text-sm text-gray-500">
+                              ¥{bike.price} | 成色 {bike.condition}/10 | 状态：{
+                                bike.status === 'PENDING_APPROVAL' ? '待审核' :
+                                bike.status === 'IN_STOCK' ? '在库' :
+                                bike.status === 'LOCKED' ? '已锁定' :
+                                bike.status === 'RESERVED' ? '已预约' : '已售出'
+                              }
+                            </p>
+                          </div>
+                          <span className={`px-3 py-1 text-xs font-bold rounded-full ${
+                            bike.status === 'IN_STOCK' ? 'bg-green-100 text-green-700' :
+                            bike.status === 'PENDING_APPROVAL' ? 'bg-yellow-100 text-yellow-700' :
+                            bike.status === 'RESERVED' ? 'bg-blue-100 text-blue-700' :
+                            'bg-gray-200 text-gray-600'
+                          }`}>
+                            {bike.status}
+                          </span>
+                          {bike.status === 'RESERVED' && (
+                            <button
+                              onClick={() => handleStoreInInventory(bike.id)}
+                              className="ml-2 bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition"
+                              title="线下交易完成，将自行车存入库存"
+                            >
+                              ✓ 确认入库
+                            </button>
+                          )}
                     </div>
                   ))}
                 </div>

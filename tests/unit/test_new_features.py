@@ -752,11 +752,11 @@ def test_admin_confirm_bicycle_transaction(client, user_token, admin_token):
     
     assert confirm_response.status_code == 200
     data = confirm_response.json()
-    assert data["message"] == "自行车交易确认成功"
+    assert data["message"] == "自行车交易确认成功，等待线下交易"
     
-    # 验证自行车状态变为 SOLD
+    # 验证自行车状态变为 RESERVED
     bike_status_response = client.get(f"/bicycles/{bike_id}", headers={"Authorization": f"Bearer {admin_token}"})
-    assert bike_status_response.json()["status"] == "SOLD"
+    assert bike_status_response.json()["status"] == "RESERVED"
 
 def test_admin_confirm_appointment_transaction(client, user_token, admin_token):
     """测试管理员确认预约交易（买家流程）"""
@@ -870,8 +870,74 @@ def test_admin_dashboard(client, admin_token):
     
     assert "pending_bicycles_count" in data
     assert "pending_appointments_count" in data
+    assert "waiting_confirmation_count" in data
     assert "locked_slots_with_countdown" in data
-    assert "pending_bicycles" in data
-    assert "pending_appointments" in data
+    assert "waiting_appointments" in data
+    assert "waiting_bicycles" in data
+
+
+def test_store_bicycle_in_inventory(client, user_token, admin_token):
+    """测试管理员将已预约的自行车存入库存"""
+    # 卖家登记自行车
+    bike_response = client.post("/bicycles/", json={
+        "brand": "Store Test Bike",
+        "condition": 8,
+        "price": 120
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    bike_id = bike_response.json()["id"]
+    
+    # 管理员提出时间段
+    start_time = datetime.now() + timedelta(hours=1)
+    end_time = datetime.now() + timedelta(hours=2)
+    
+    propose_response = client.post(
+        f"/bicycles/{bike_id}/propose-slots",
+        json=[
+            {"start_time": start_time.isoformat(), "end_time": end_time.isoformat()}
+        ],
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    assert propose_response.status_code == 200
+    
+    # 卖家选择时间段
+    slots_response = client.get(
+        f"/time_slots/bicycle/{bike_id}",
+        headers={"Authorization": f"Bearer {user_token}"}
+    )
+    assert slots_response.status_code == 200
+    slots = slots_response.json()
+    slot_id = slots[0]["id"]
+    
+    select_response = client.put(
+        f"/time_slots/select-bicycle/{bike_id}",
+        json={"time_slot_id": slot_id},
+        headers={"Authorization": f"Bearer {user_token}"}
+    )
+    assert select_response.status_code == 200
+    
+    # 管理员确认交易（状态变为 RESERVED）
+    confirm_response = client.post(
+        f"/bicycles/{bike_id}/confirm",
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    assert confirm_response.status_code == 200
+    
+    # 验证自行车状态为 RESERVED
+    bike_status_response = client.get(f"/bicycles/{bike_id}", headers={"Authorization": f"Bearer {admin_token}"})
+    assert bike_status_response.json()["status"] == "RESERVED"
+    
+    # 管理员将自行车存入库存
+    store_response = client.put(
+        f"/bicycles/{bike_id}/store-inventory",
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    
+    assert store_response.status_code == 200
+    stored_bike = store_response.json()
+    assert stored_bike["status"] == "IN_STOCK"
+    
+    # 再次验证自行车状态
+    bike_status_response = client.get(f"/bicycles/{bike_id}", headers={"Authorization": f"Bearer {admin_token}"})
+    assert bike_status_response.json()["status"] == "IN_STOCK"
 
 

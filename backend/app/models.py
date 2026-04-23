@@ -16,6 +16,7 @@ class BicycleStatus(str, enum.Enum):
     PENDING_APPROVAL = "PENDING_APPROVAL"
     IN_STOCK = "IN_STOCK"
     LOCKED = "LOCKED"
+    RESERVED = "RESERVED"  # 已预约，等待线下交易
     SOLD = "SOLD"
 
 class AppointmentType(str, enum.Enum):

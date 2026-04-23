@@ -100,6 +100,25 @@ def approve_bicycle(
     db.refresh(bike)
     return bike
 
+@router.put("/{bike_id}/store-inventory", response_model=BicycleResponse)
+def store_bicycle_in_inventory(
+    bike_id: UUID,
+    current_user: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """管理员将已完成交易的自行车存入库存（卖家流程完成后）"""
+    bike = db.query(Bicycle).filter(Bicycle.id == bike_id).first()
+    if not bike:
+        raise HTTPException(status_code=404, detail="自行车不存在")
+    
+    if bike.status != BicycleStatus.RESERVED.value:
+        raise HTTPException(status_code=400, detail="自行车状态不是已预约，无法存入库存")
+    
+    bike.status = BicycleStatus.IN_STOCK.value
+    db.commit()
+    db.refresh(bike)
+    return bike
+
 @router.post("/{bike_id}/propose-slots", response_model=dict)
 def propose_time_slots(
     bike_id: UUID,
@@ -180,8 +199,8 @@ def confirm_bicycle_transaction(
     # 确认时间段，标记为已预订
     time_slot.is_booked = "true"
     
-    # 更新自行车状态为已售出（交易完成）
-    bike.status = BicycleStatus.SOLD.value
+    # 更新自行车状态为已预约（等待线下交易）
+    bike.status = BicycleStatus.RESERVED.value
     db.commit()
     
     # 发送私信通知卖家
@@ -198,7 +217,7 @@ def confirm_bicycle_transaction(
     except:
         pass
     
-    return {"message": "自行车交易确认成功"}
+    return {"message": "自行车交易确认成功，等待线下交易"}
 
 @router.post("/{bike_id}/cancel", response_model=dict)
 def cancel_bicycle(
@@ -595,9 +614,10 @@ def get_admin_dashboard(
         Bicycle.status == BicycleStatus.PENDING_APPROVAL.value
     ).all()
     
-    # 获取待处理的预约
-    pending_appointments = db.query(Appointment).filter(
-        Appointment.status == AppointmentStatus.PENDING.value
+    # 获取待处理的预约（用户已选择时间段，等待管理员确认）
+    waiting_appointments = db.query(Appointment).filter(
+        Appointment.status == AppointmentStatus.PENDING.value,
+        Appointment.time_slot_id != None
     ).all()
     
     # 获取已锁定但未完成的时间段（带倒计时）
@@ -619,9 +639,20 @@ def get_admin_dashboard(
                 "appointment_type": slot.appointment_type
             })
     
+    # 获取等待管理员确认的自行车（卖家已选择时间段）
+    # 通过 TimeSlot 查询，找到 LOCKED 状态且有未预订时间段的自行车
+    locked_bike_ids = db.query(TimeSlot.bicycle_id).filter(
+        TimeSlot.is_booked == "false"
+    ).distinct()
+    waiting_bicycles = db.query(Bicycle).filter(
+        Bicycle.status == BicycleStatus.LOCKED.value,
+        Bicycle.id.in_(locked_bike_ids)
+    ).all()
+    
     return {
         "pending_bicycles_count": len(pending_bicycles),
-        "pending_appointments_count": len(pending_appointments),
+        "pending_appointments_count": len(waiting_appointments),
+        "waiting_confirmation_count": len(waiting_bicycles) + len(waiting_appointments),
         "pending_bicycles": [
             {
                 "id": str(bike.id),
@@ -631,15 +662,26 @@ def get_admin_dashboard(
                 "created_at": bike.created_at.isoformat() if bike.created_at else None
             } for bike in pending_bicycles
         ],
-        "pending_appointments": [
+        "waiting_appointments": [
             {
                 "id": str(apt.id),
                 "user_id": str(apt.user_id),
                 "bicycle_id": str(apt.bicycle_id),
                 "type": apt.type,
                 "status": apt.status,
+                "time_slot_id": str(apt.time_slot_id) if apt.time_slot_id else None,
                 "created_at": apt.created_at.isoformat() if apt.created_at else None
-            } for apt in pending_appointments
+            } for apt in waiting_appointments
+        ],
+        "waiting_bicycles": [
+            {
+                "id": str(bike.id),
+                "brand": bike.brand,
+                "owner_id": str(bike.owner_id),
+                "status": bike.status,
+                "time_slot_id": str(bike.time_slot_id) if bike.time_slot_id else None,
+                "created_at": bike.created_at.isoformat() if bike.created_at else None
+            } for bike in waiting_bicycles
         ],
         "locked_slots_with_countdown": slots_with_countdown
     }

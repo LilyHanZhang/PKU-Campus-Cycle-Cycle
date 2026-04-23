@@ -6,6 +6,13 @@ Buyer selects a bicycle from the inventory -> The bicycle is temporarily locked 
 
 During the period from when the seller/buyer registers until the offline transaction takes place, the seller/buyer can cancel the transaction at any time, and the admin can also reject the transaction at any time, providing a reason. From the time the admin proposes time slots to the actual offline transaction, the time slot can also be changed. The user will be notified again, and the user can proceed with the transaction based on the new time slot.
 
+## To do
+- now after the admin proposes time slots, the user can see it. But after they choose a time slot, there's a notification that for them to "等待管理员确认“. But the admin could not confirm this, and the procedure cannot continue. Fix this problem both for seller and buyer.
+- For the seller  process, after the admin choose the time slots, the bicyle turns into "已锁定" status. However, the admin should be able to handle the bicyle (such as store it in the invertory when off-line transaction was done). 
+- Both the user and admin should be able to cancel the transaction
+- The notification feature now still does not work.
+
+
 ## Additional Features
 
 - Add a private messaging feature. Admins can send private messages to sellers/buyers. Sellers and buyers can also send private messages to any admin.

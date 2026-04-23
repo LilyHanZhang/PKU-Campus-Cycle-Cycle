@@ -238,6 +238,13 @@ def confirm_time_slot(
     
     # 更新预约状态为已确认
     appointment.status = AppointmentStatus.CONFIRMED.value
+    
+    # 如果是买家预约（type 为 drop-off），将自行车状态改为 SOLD
+    if appointment.type == "drop-off":
+        bicycle = db.query(Bicycle).filter(Bicycle.id == appointment.bicycle_id).first()
+        if bicycle and bicycle.status == BicycleStatus.IN_STOCK.value:
+            bicycle.status = BicycleStatus.SOLD.value
+    
     db.commit()
     
     # 发送私信通知用户

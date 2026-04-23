@@ -131,8 +131,9 @@ def propose_time_slots(
     if not bike:
         raise HTTPException(status_code=404, detail="自行车不存在")
     
-    if bike.status != BicycleStatus.PENDING_APPROVAL.value:
-        raise HTTPException(status_code=400, detail="自行车状态不正确")
+    # 自行车状态应该是 IN_STOCK（已审核通过）且有预约
+    if bike.status != BicycleStatus.IN_STOCK.value:
+        raise HTTPException(status_code=400, detail="自行车状态不正确，需要先审核通过")
     
     from ..models import TimeSlot
     from datetime import datetime

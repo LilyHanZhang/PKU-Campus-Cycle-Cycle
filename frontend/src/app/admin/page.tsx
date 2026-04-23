@@ -5,10 +5,6 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { User, Bike, Calendar, Shield, Trash2 } from "lucide-react";
 
-// 强制动态渲染
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
 // 生产环境 API 地址
 const API_URL = "https://pku-campus-cycle-cycle.onrender.com";
 

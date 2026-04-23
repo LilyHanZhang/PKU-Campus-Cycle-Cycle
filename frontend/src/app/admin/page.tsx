@@ -758,11 +758,11 @@ export default function AdminDashboard() {
                 )}
 
                 {/* Pending Appointments List (old name for backward compatibility) */}
-                {dashboardData.pending_appointments.length > 0 && (
+                {dashboardData.waiting_appointments && dashboardData.waiting_appointments.length > 0 && (
                   <div className="bg-white rounded-2xl shadow-xl p-6">
                     <h2 className="text-2xl font-bold text-gray-800 mb-4">待处理预约</h2>
                     <div className="space-y-3">
-                      {dashboardData.pending_appointments.map((apt: any) => (
+                      {dashboardData.waiting_appointments.map((apt: any) => (
                         <div key={apt.id} className="p-4 bg-gray-50 rounded-lg flex justify-between items-center">
                           <div>
                             <p className="font-bold text-gray-800">预约 ID: {apt.id.slice(0, 8)}...</p>

@@ -5,13 +5,12 @@ from contextlib import asynccontextmanager
 import os
 import traceback
 
-from .database import engine, Base
+from .database import engine, Base, SessionLocal
 from .models import User, Role
 from .auth import get_password_hash
 from .routers import users, bicycles, posts, time_slots, messages
 
 def create_super_admin():
-    from .database import SessionLocal
     db = SessionLocal()
     try:
         existing = db.query(User).filter(User.email == "2200017736@stu.pku.edu.cn").first()
@@ -30,6 +29,47 @@ def create_super_admin():
     finally:
         db.close()
 
+def migrate_database():
+    """数据库迁移：确保所有表结构正确"""
+    db = SessionLocal()
+    try:
+        # 检查 appointments 表是否有 time_slot_id 字段
+        from sqlalchemy import text
+        try:
+            result = db.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'appointments' 
+                AND column_name = 'time_slot_id'
+            """))
+            exists = result.fetchone()
+            
+            if not exists:
+                print("添加 time_slot_id 字段到 appointments 表...")
+                db.execute(text("""
+                    ALTER TABLE appointments 
+                    ADD COLUMN time_slot_id UUID
+                """))
+                db.commit()
+                print("✓ time_slot_id 字段添加成功")
+            else:
+                print("✓ time_slot_id 字段已存在")
+        except Exception as e:
+            # SQLite 不支持 information_schema，直接尝试添加字段
+            print(f"检查字段失败（可能是 SQLite）: {e}")
+            print("尝试直接添加 time_slot_id 字段...")
+            try:
+                db.execute(text("""
+                    ALTER TABLE appointments 
+                    ADD COLUMN time_slot_id UUID
+                """))
+                db.commit()
+                print("✓ time_slot_id 字段添加成功")
+            except Exception as e2:
+                print(f"字段可能已存在或添加失败：{e2}")
+    finally:
+        db.close()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if engine is not None:
@@ -38,6 +78,12 @@ async def lifespan(app: FastAPI):
             print("✓ Database tables created successfully")
         except Exception as e:
             print(f"❌ Database error: {e}")
+        
+        try:
+            migrate_database()
+        except Exception as e:
+            print(f"❌ Database migration error: {e}")
+        
         try:
             create_super_admin()
         except Exception as e:

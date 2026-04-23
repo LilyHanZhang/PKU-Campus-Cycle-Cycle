@@ -91,8 +91,11 @@ def get_bicycle_time_slots(
         raise HTTPException(status_code=404, detail="自行车不存在")
     
     # 检查权限：自行车所有者、管理员、或有预约的用户可以查看
+    from uuid import UUID
+    current_user_id = UUID(current_user["user_id"]) if isinstance(current_user["user_id"], str) else current_user["user_id"]
+    
     has_permission = (
-        str(bicycle.owner_id) == current_user["user_id"] or 
+        bicycle.owner_id == current_user_id or 
         current_user["role"] in ["ADMIN", "SUPER_ADMIN"]
     )
     
@@ -100,7 +103,7 @@ def get_bicycle_time_slots(
     if not has_permission:
         user_appointment = db.query(Appointment).filter(
             Appointment.bicycle_id == bike_id,
-            Appointment.user_id == current_user["user_id"],
+            Appointment.user_id == current_user_id,
             Appointment.status == "PENDING"
         ).first()
         if user_appointment:

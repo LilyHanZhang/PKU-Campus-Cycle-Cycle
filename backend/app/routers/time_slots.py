@@ -83,14 +83,30 @@ def get_bicycle_time_slots(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """获取自行车的可选时间段（卖家场景）"""
-    from ..models import Bicycle
+    """获取自行车的可选时间段（卖家和买家场景）"""
+    from ..models import Bicycle, Appointment
+    
     bicycle = db.query(Bicycle).filter(Bicycle.id == bike_id).first()
     if not bicycle:
         raise HTTPException(status_code=404, detail="自行车不存在")
     
-    # 只有自行车所有者或管理员可以查看
-    if str(bicycle.owner_id) != current_user["user_id"] and current_user["role"] not in ["ADMIN", "SUPER_ADMIN"]:
+    # 检查权限：自行车所有者、管理员、或有预约的用户可以查看
+    has_permission = (
+        str(bicycle.owner_id) == current_user["user_id"] or 
+        current_user["role"] in ["ADMIN", "SUPER_ADMIN"]
+    )
+    
+    # 检查用户是否有该自行车的待处理预约
+    if not has_permission:
+        user_appointment = db.query(Appointment).filter(
+            Appointment.bicycle_id == bike_id,
+            Appointment.user_id == current_user["user_id"],
+            Appointment.status == "PENDING"
+        ).first()
+        if user_appointment:
+            has_permission = True
+    
+    if not has_permission:
         raise HTTPException(status_code=403, detail="无权限查看")
     
     time_slots = db.query(TimeSlot).filter(

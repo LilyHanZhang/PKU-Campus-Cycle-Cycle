@@ -705,4 +705,173 @@ def test_buyer_select_time_slot(client, user_token, admin_token):
     apt_status_response = client.get(f"/appointments/{apt_id}", headers={"Authorization": f"Bearer {admin_token}"})
     assert apt_status_response.json()["status"] == "PENDING"
 
+def test_admin_confirm_bicycle_transaction(client, user_token, admin_token):
+    """测试管理员确认自行车交易（卖家流程）"""
+    # 卖家登记自行车
+    bike_response = client.post("/bicycles/", json={
+        "brand": "Confirm Test Bike",
+        "condition": 8,
+        "price": 120
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    bike_id = bike_response.json()["id"]
+    
+    # 管理员提出时间段
+    start_time = datetime.now() + timedelta(hours=1)
+    end_time = datetime.now() + timedelta(hours=2)
+    
+    propose_response = client.post(
+        f"/bicycles/{bike_id}/propose-slots",
+        json=[
+            {"start_time": start_time.isoformat(), "end_time": end_time.isoformat()}
+        ],
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    assert propose_response.status_code == 200
+    
+    # 卖家选择时间段
+    slots_response = client.get(
+        f"/time_slots/bicycle/{bike_id}",
+        headers={"Authorization": f"Bearer {user_token}"}
+    )
+    assert slots_response.status_code == 200
+    slots = slots_response.json()
+    slot_id = slots[0]["id"]
+    
+    select_response = client.put(
+        f"/time_slots/select-bicycle/{bike_id}",
+        json={"time_slot_id": slot_id},
+        headers={"Authorization": f"Bearer {user_token}"}
+    )
+    assert select_response.status_code == 200
+    
+    # 管理员确认交易
+    confirm_response = client.post(
+        f"/bicycles/{bike_id}/confirm",
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    
+    assert confirm_response.status_code == 200
+    data = confirm_response.json()
+    assert data["message"] == "自行车交易确认成功"
+    
+    # 验证自行车状态变为 SOLD
+    bike_status_response = client.get(f"/bicycles/{bike_id}", headers={"Authorization": f"Bearer {admin_token}"})
+    assert bike_status_response.json()["status"] == "SOLD"
+
+def test_admin_confirm_appointment_transaction(client, user_token, admin_token):
+    """测试管理员确认预约交易（买家流程）"""
+    # 管理员创建并批准自行车
+    bike_response = client.post("/bicycles/", json={
+        "brand": "Confirm Apt Test Bike",
+        "condition": 7,
+        "price": 85
+    }, headers={"Authorization": f"Bearer {admin_token}"})
+    bike_id = bike_response.json()["id"]
+    
+    client.put(f"/bicycles/{bike_id}/approve", headers={"Authorization": f"Bearer {admin_token}"})
+    
+    # 买家创建预约
+    apt_response = client.post("/appointments/", json={
+        "bicycle_id": bike_id,
+        "type": "pick-up"
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    apt_id = apt_response.json()["id"]
+    
+    # 管理员提出时间段
+    start_time = datetime.now() + timedelta(hours=2)
+    end_time = datetime.now() + timedelta(hours=3)
+    
+    propose_response = client.post(
+        f"/appointments/{apt_id}/propose-slots",
+        json=[
+            {"start_time": start_time.isoformat(), "end_time": end_time.isoformat()}
+        ],
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    assert propose_response.status_code == 200
+    
+    # 买家选择时间段
+    slots_response = client.get(
+        f"/time_slots/appointment/{apt_id}",
+        headers={"Authorization": f"Bearer {user_token}"}
+    )
+    assert slots_response.status_code == 200
+    slots = slots_response.json()
+    slot_id = slots[0]["id"]
+    
+    select_response = client.put(
+        f"/time_slots/select/{apt_id}",
+        json={"time_slot_id": slot_id},
+        headers={"Authorization": f"Bearer {user_token}"}
+    )
+    assert select_response.status_code == 200
+    
+    # 管理员确认交易
+    confirm_response = client.put(
+        f"/time_slots/confirm/{apt_id}",
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    
+    assert confirm_response.status_code == 200
+    data = confirm_response.json()
+    assert data["message"] == "时间段确认成功"
+
+def test_user_cancel_bicycle(client, user_token, admin_token):
+    """测试用户取消自行车登记"""
+    bike_response = client.post("/bicycles/", json={
+        "brand": "Cancel Test Bike",
+        "condition": 6,
+        "price": 60
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    bike_id = bike_response.json()["id"]
+    
+    cancel_response = client.post(
+        f"/bicycles/{bike_id}/cancel",
+        headers={"Authorization": f"Bearer {user_token}"}
+    )
+    
+    assert cancel_response.status_code == 200
+    assert cancel_response.json()["message"] == "自行车登记已取消"
+    
+    # 验证自行车已被删除
+    bike_status_response = client.get(f"/bicycles/{bike_id}", headers={"Authorization": f"Bearer {admin_token}"})
+    assert bike_status_response.status_code == 404
+
+def test_admin_cancel_bicycle(client, user_token, admin_token):
+    """测试管理员取消自行车登记"""
+    bike_response = client.post("/bicycles/", json={
+        "brand": "Admin Cancel Test Bike",
+        "condition": 7,
+        "price": 70
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    bike_id = bike_response.json()["id"]
+    
+    cancel_response = client.post(
+        f"/bicycles/{bike_id}/admin-cancel?reason=测试取消",
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    
+    assert cancel_response.status_code == 200
+    assert cancel_response.json()["message"] == "自行车登记已被管理员取消"
+    
+    # 验证自行车已被删除
+    bike_status_response = client.get(f"/bicycles/{bike_id}", headers={"Authorization": f"Bearer {admin_token}"})
+    assert bike_status_response.status_code == 404
+
+def test_admin_dashboard(client, admin_token):
+    """测试管理员仪表盘接口"""
+    dashboard_response = client.get(
+        "/bicycles/admin/dashboard",
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    
+    assert dashboard_response.status_code == 200
+    data = dashboard_response.json()
+    
+    assert "pending_bicycles_count" in data
+    assert "pending_appointments_count" in data
+    assert "locked_slots_with_countdown" in data
+    assert "pending_bicycles" in data
+    assert "pending_appointments" in data
+
 

@@ -243,9 +243,11 @@ def confirm_time_slot(
     # 发送私信通知用户
     try:
         from ..routers.messages import send_message_to_user
+        from uuid import UUID
+        admin_id = UUID(current_user["user_id"]) if isinstance(current_user["user_id"], str) else current_user["user_id"]
         send_message_to_user(
             db=db,
-            sender_id=None,  # 系统消息
+            sender_id=admin_id,
             receiver_id=appointment.user_id,
             content=f"管理员已确认时间段，请按时进行交易。预约 ID: {apt_id}"
         )

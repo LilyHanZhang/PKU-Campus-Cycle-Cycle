@@ -3,9 +3,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from typing import List, Optional
 from uuid import UUID
+from datetime import datetime
 
 from ..database import get_db
-from ..models import Bicycle, BicycleStatus, Appointment, AppointmentStatus, User
+from ..models import Bicycle, BicycleStatus, Appointment, AppointmentStatus, User, TimeSlot
 from ..schemas import (
     BicycleCreate, BicycleUpdate, BicycleResponse,
     AppointmentCreate, AppointmentUpdate, AppointmentResponse
@@ -154,6 +155,111 @@ def propose_time_slots(
         print(f"Failed to send notification: {e}")
     
     return {"message": f"已提出 {len(time_slots)} 个时间段，等待卖家选择", "slots": created_slots}
+
+@router.post("/{bike_id}/confirm", response_model=dict)
+def confirm_bicycle_transaction(
+    bike_id: UUID,
+    current_user: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """管理员确认自行车交易完成（卖家流程）"""
+    bike = db.query(Bicycle).filter(Bicycle.id == bike_id).first()
+    if not bike:
+        raise HTTPException(status_code=404, detail="自行车不存在")
+    
+    # 查找该自行车的时间段（应该只有一个被选择的）
+    from ..models import TimeSlot
+    time_slot = db.query(TimeSlot).filter(
+        TimeSlot.bicycle_id == bike_id,
+        TimeSlot.is_booked == "false"
+    ).first()
+    
+    if not time_slot:
+        raise HTTPException(status_code=400, detail="卖家还未选择时间段")
+    
+    # 确认时间段，标记为已预订
+    time_slot.is_booked = "true"
+    
+    # 更新自行车状态为已售出（交易完成）
+    bike.status = BicycleStatus.SOLD.value
+    db.commit()
+    
+    # 发送私信通知卖家
+    try:
+        from ..routers.messages import send_message_to_user
+        from uuid import UUID
+        admin_id = UUID(current_user["user_id"]) if isinstance(current_user["user_id"], str) else current_user["user_id"]
+        send_message_to_user(
+            db=db,
+            sender_id=admin_id,
+            receiver_id=bike.owner_id,
+            content=f"管理员已确认时间段，请按时进行交易。自行车 ID: {bike_id}"
+        )
+    except:
+        pass
+    
+    return {"message": "自行车交易确认成功"}
+
+@router.post("/{bike_id}/cancel", response_model=dict)
+def cancel_bicycle(
+    bike_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """卖家取消自行车登记"""
+    bike = db.query(Bicycle).filter(Bicycle.id == bike_id).first()
+    if not bike:
+        raise HTTPException(status_code=404, detail="自行车不存在")
+    
+    # 验证是自行车所有者
+    if str(bike.owner_id) != current_user["user_id"]:
+        raise HTTPException(status_code=403, detail="无权限取消此自行车")
+    
+    # 删除相关的时间段
+    from ..models import TimeSlot
+    db.query(TimeSlot).filter(TimeSlot.bicycle_id == bike_id).delete()
+    
+    # 删除自行车
+    db.delete(bike)
+    db.commit()
+    
+    return {"message": "自行车登记已取消"}
+
+@router.post("/{bike_id}/admin-cancel", response_model=dict)
+def admin_cancel_bicycle(
+    bike_id: UUID,
+    reason: str,
+    current_user: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """管理员取消自行车登记"""
+    bike = db.query(Bicycle).filter(Bicycle.id == bike_id).first()
+    if not bike:
+        raise HTTPException(status_code=404, detail="自行车不存在")
+    
+    # 删除相关的时间段
+    from ..models import TimeSlot
+    db.query(TimeSlot).filter(TimeSlot.bicycle_id == bike_id).delete()
+    
+    # 删除自行车
+    db.delete(bike)
+    db.commit()
+    
+    # 发送私信通知卖家
+    try:
+        from ..routers.messages import send_message_to_user
+        from uuid import UUID
+        admin_id = UUID(current_user["user_id"]) if isinstance(current_user["user_id"], str) else current_user["user_id"]
+        send_message_to_user(
+            db=db,
+            sender_id=admin_id,
+            receiver_id=bike.owner_id,
+            content=f"管理员已取消您的自行车登记。原因：{reason}。自行车 ID: {bike_id}"
+        )
+    except:
+        pass
+    
+    return {"message": "自行车登记已被管理员取消"}
 
 @router.put("/{bike_id}/reject", response_model=BicycleResponse)
 def reject_bicycle(
@@ -400,6 +506,45 @@ def cancel_appointment(
     db.refresh(appointment)
     return appointment
 
+@appointment_router.post("/{apt_id}/admin-cancel", response_model=dict)
+def admin_cancel_appointment(
+    apt_id: UUID,
+    reason: str,
+    current_user: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """管理员取消预约"""
+    appointment = db.query(Appointment).filter(Appointment.id == apt_id).first()
+    if not appointment:
+        raise HTTPException(status_code=404, detail="预约不存在")
+    
+    # 删除相关的时间段
+    from ..models import TimeSlot
+    db.query(TimeSlot).filter(TimeSlot.appointment_id == apt_id).delete()
+    
+    appointment.status = AppointmentStatus.CANCELLED.value
+    # 释放自行车
+    bike = db.query(Bicycle).filter(Bicycle.id == appointment.bicycle_id).first()
+    if bike and bike.status == BicycleStatus.LOCKED.value:
+        bike.status = BicycleStatus.IN_STOCK.value
+    db.commit()
+    
+    # 发送私信通知买家
+    try:
+        from ..routers.messages import send_message_to_user
+        from uuid import UUID
+        admin_id = UUID(current_user["user_id"]) if isinstance(current_user["user_id"], str) else current_user["user_id"]
+        send_message_to_user(
+            db=db,
+            sender_id=admin_id,
+            receiver_id=appointment.user_id,
+            content=f"管理员已取消您的预约。原因：{reason}。预约 ID: {apt_id}"
+        )
+    except:
+        pass
+    
+    return {"message": "预约已被管理员取消"}
+
 @appointment_router.put("/{apt_id}/reject", response_model=AppointmentResponse)
 def reject_appointment(
     apt_id: UUID,
@@ -435,4 +580,66 @@ def get_statistics(db: Session = Depends(get_db)):
         "sold_bicycles": sold_bicycles,
         "in_stock_bicycles": in_stock_bicycles,
         "total_users": total_users
+    }
+
+@router.get("/admin/dashboard")
+def get_admin_dashboard(
+    current_user: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """管理员仪表盘 - 显示待处理交易及倒计时"""
+    from datetime import timedelta
+    
+    # 获取待处理的自行车登记
+    pending_bicycles = db.query(Bicycle).filter(
+        Bicycle.status == BicycleStatus.PENDING_APPROVAL.value
+    ).all()
+    
+    # 获取待处理的预约
+    pending_appointments = db.query(Appointment).filter(
+        Appointment.status == AppointmentStatus.PENDING.value
+    ).all()
+    
+    # 获取已锁定但未完成的时间段（带倒计时）
+    locked_slots = db.query(TimeSlot).filter(
+        TimeSlot.is_booked == "false"
+    ).all()
+    
+    now = datetime.utcnow()
+    slots_with_countdown = []
+    for slot in locked_slots:
+        time_remaining = (slot.start_time - now).total_seconds()
+        if time_remaining > 0:
+            slots_with_countdown.append({
+                "id": str(slot.id),
+                "bicycle_id": str(slot.bicycle_id),
+                "start_time": slot.start_time.isoformat(),
+                "end_time": slot.end_time.isoformat(),
+                "countdown_seconds": int(time_remaining),
+                "appointment_type": slot.appointment_type
+            })
+    
+    return {
+        "pending_bicycles_count": len(pending_bicycles),
+        "pending_appointments_count": len(pending_appointments),
+        "pending_bicycles": [
+            {
+                "id": str(bike.id),
+                "brand": bike.brand,
+                "owner_id": str(bike.owner_id),
+                "status": bike.status,
+                "created_at": bike.created_at.isoformat() if bike.created_at else None
+            } for bike in pending_bicycles
+        ],
+        "pending_appointments": [
+            {
+                "id": str(apt.id),
+                "user_id": str(apt.user_id),
+                "bicycle_id": str(apt.bicycle_id),
+                "type": apt.type,
+                "status": apt.status,
+                "created_at": apt.created_at.isoformat() if apt.created_at else None
+            } for apt in pending_appointments
+        ],
+        "locked_slots_with_countdown": slots_with_countdown
     }

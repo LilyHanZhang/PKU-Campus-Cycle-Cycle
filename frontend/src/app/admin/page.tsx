@@ -7,14 +7,67 @@ import { User, Bike, Calendar, Shield, Trash2 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
+// Countdown Timer Component
+function CountdownTimer({ slot }: { slot: any }) {
+  const [timeLeft, setTimeLeft] = useState(slot.countdown_seconds);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft((prev: number) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTime = (seconds: number) => {
+    const days = Math.floor(seconds / (3600 * 24));
+    const hours = Math.floor((seconds % (3600 * 24)) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    if (days > 0) {
+      return `${days}天 ${hours}小时 ${minutes}分钟`;
+    } else if (hours > 0) {
+      return `${hours}小时 ${minutes}分钟 ${secs}秒`;
+    } else if (minutes > 0) {
+      return `${minutes}分钟 ${secs}秒`;
+    } else {
+      return `${secs}秒`;
+    }
+  };
+
+  const isUrgent = timeLeft < 3600; // Less than 1 hour
+
+  return (
+    <div className={`p-4 rounded-lg border-2 ${isUrgent ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
+      <div className="flex justify-between items-center">
+        <div>
+          <p className="font-bold text-gray-800">时间段：{new Date(slot.start_time).toLocaleString()}</p>
+          <p className="text-sm text-gray-500">类型：{slot.appointment_type === 'pick-up' ? '取车' : '还车'}</p>
+        </div>
+        <div className={`text-2xl font-bold ${isUrgent ? 'text-red-600' : 'text-emerald-600'}`}>
+          {timeLeft > 0 ? formatTime(timeLeft) : '已过期'}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [pendingBikes, setPendingBikes] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [allBikes, setAllBikes] = useState([]);
   const [allAppointments, setAllAppointments] = useState([]);
+  const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("pending");
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -35,16 +88,18 @@ export default function AdminDashboard() {
     const headers = { Authorization: `Bearer ${token}` };
 
     try {
-      const [pendingRes, usersRes, bikesRes, appointmentsRes] = await Promise.all([
+      const [pendingRes, usersRes, bikesRes, appointmentsRes, dashboardRes] = await Promise.all([
         axios.get(`${API_URL}/bicycles/?status=PENDING_APPROVAL`, { headers }),
         axios.get(`${API_URL}/users/`, { headers }),
         axios.get(`${API_URL}/bicycles/`, { headers }),
         axios.get(`${API_URL}/appointments/`, { headers }),
+        axios.get(`${API_URL}/bicycles/admin/dashboard`, { headers }),
       ]);
       setPendingBikes(pendingRes.data);
       setAllUsers(usersRes.data);
       setAllBikes(bikesRes.data);
       setAllAppointments(appointmentsRes.data);
+      setDashboardData(dashboardRes.data);
     } catch (err) {
       console.error("Failed to fetch data", err);
       setError("获取数据失败");
@@ -464,6 +519,14 @@ export default function AdminDashboard() {
         {/* Tabs */}
         <div className="flex space-x-4 mb-6 bg-white rounded-xl p-2 shadow-lg">
           <button
+            onClick={() => setActiveTab("dashboard")}
+            className={`flex-1 py-3 px-6 rounded-lg font-bold transition ${
+              activeTab === "dashboard" ? "bg-[#2ab26a] text-white" : "text-gray-600 hover:bg-gray-100"
+            }`}
+          >
+            仪表盘 ({dashboardData?.pending_bicycles_count || 0})
+          </button>
+          <button
             onClick={() => setActiveTab("pending")}
             className={`flex-1 py-3 px-6 rounded-lg font-bold transition ${
               activeTab === "pending" ? "bg-[#2ab26a] text-white" : "text-gray-600 hover:bg-gray-100"
@@ -501,6 +564,85 @@ export default function AdminDashboard() {
           <p className="text-center py-10">加载中...</p>
         ) : (
           <>
+            {/* Dashboard Tab */}
+            {activeTab === "dashboard" && dashboardData && (
+              <div className="space-y-6">
+                {/* Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl shadow-xl p-6">
+                    <h3 className="text-lg font-bold mb-2">待处理自行车登记</h3>
+                    <p className="text-4xl font-extrabold">{dashboardData.pending_bicycles_count}</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-2xl shadow-xl p-6">
+                    <h3 className="text-lg font-bold mb-2">待处理预约</h3>
+                    <p className="text-4xl font-extrabold">{dashboardData.pending_appointments_count}</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-orange-500 to-orange-600 text-white rounded-2xl shadow-xl p-6">
+                    <h3 className="text-lg font-bold mb-2">已锁定时间段</h3>
+                    <p className="text-4xl font-extrabold">{dashboardData.locked_slots_with_countdown.length}</p>
+                  </div>
+                </div>
+
+                {/* Countdown Timer */}
+                {dashboardData.locked_slots_with_countdown.length > 0 && (
+                  <div className="bg-white rounded-2xl shadow-xl p-6">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">⏰ 即将到期的时间段</h2>
+                    <div className="space-y-4">
+                      {dashboardData.locked_slots_with_countdown.map((slot: any) => (
+                        <CountdownTimer key={slot.id} slot={slot} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pending Bicycles List */}
+                {dashboardData.pending_bicycles.length > 0 && (
+                  <div className="bg-white rounded-2xl shadow-xl p-6">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">待处理自行车登记</h2>
+                    <div className="space-y-3">
+                      {dashboardData.pending_bicycles.map((bike: any) => (
+                        <div key={bike.id} className="p-4 bg-gray-50 rounded-lg flex justify-between items-center">
+                          <div>
+                            <p className="font-bold text-gray-800">{bike.brand}</p>
+                            <p className="text-sm text-gray-500">ID: {bike.id.slice(0, 8)}...</p>
+                          </div>
+                          <button
+                            onClick={() => setActiveTab("pending")}
+                            className="px-4 py-2 bg-[#2ab26a] text-white rounded-lg hover:bg-[#249a5c]"
+                          >
+                            处理
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pending Appointments List */}
+                {dashboardData.pending_appointments.length > 0 && (
+                  <div className="bg-white rounded-2xl shadow-xl p-6">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">待处理预约</h2>
+                    <div className="space-y-3">
+                      {dashboardData.pending_appointments.map((apt: any) => (
+                        <div key={apt.id} className="p-4 bg-gray-50 rounded-lg flex justify-between items-center">
+                          <div>
+                            <p className="font-bold text-gray-800">预约 ID: {apt.id.slice(0, 8)}...</p>
+                            <p className="text-sm text-gray-500">类型：{apt.type === 'pick-up' ? '取车' : '还车'}</p>
+                          </div>
+                          <button
+                            onClick={() => setActiveTab("appointments")}
+                            className="px-4 py-2 bg-[#2ab26a] text-white rounded-lg hover:bg-[#249a5c]"
+                          >
+                            处理
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Pending Bikes Tab */}
             {activeTab === "pending" && (
               <div className="bg-white rounded-2xl shadow-xl p-8">

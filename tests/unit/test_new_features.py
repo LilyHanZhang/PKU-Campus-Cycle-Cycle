@@ -525,6 +525,16 @@ def test_admin_propose_time_slots_for_seller(client, user_token, admin_token):
     }, headers={"Authorization": f"Bearer {user_token}"})
     bike_id = bike_response.json()["id"]
     
+    # 管理员审核自行车
+    approve_response = client.put(f"/bicycles/{bike_id}/approve", headers={"Authorization": f"Bearer {admin_token}"})
+    assert approve_response.json()["status"] == "IN_STOCK"
+    
+    # 用户创建预约（drop-off = 卖家流程）
+    apt_response = client.post("/appointments/", json={
+        "bicycle_id": bike_id,
+        "type": "drop-off"
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    
     # 管理员提出多个时间段
     start_time1 = datetime.now() + timedelta(hours=1)
     end_time1 = datetime.now() + timedelta(hours=2)
@@ -596,6 +606,16 @@ def test_seller_select_time_slot(client, user_token, admin_token):
         "price": 90
     }, headers={"Authorization": f"Bearer {user_token}"})
     bike_id = bike_response.json()["id"]
+    
+    # 管理员审核自行车
+    approve_response = client.put(f"/bicycles/{bike_id}/approve", headers={"Authorization": f"Bearer {admin_token}"})
+    assert approve_response.json()["status"] == "IN_STOCK"
+    
+    # 用户创建预约（drop-off = 卖家流程）
+    apt_response = client.post("/appointments/", json={
+        "bicycle_id": bike_id,
+        "type": "drop-off"
+    }, headers={"Authorization": f"Bearer {user_token}"})
     
     # 管理员提出时间段
     start_time = datetime.now() + timedelta(hours=1)
@@ -706,6 +726,16 @@ def test_admin_confirm_bicycle_transaction(client, user_token, admin_token):
         "price": 120
     }, headers={"Authorization": f"Bearer {user_token}"})
     bike_id = bike_response.json()["id"]
+    
+    # 管理员审核自行车
+    approve_response = client.put(f"/bicycles/{bike_id}/approve", headers={"Authorization": f"Bearer {admin_token}"})
+    assert approve_response.json()["status"] == "IN_STOCK"
+    
+    # 用户创建预约（drop-off = 卖家流程）
+    apt_response = client.post("/appointments/", json={
+        "bicycle_id": bike_id,
+        "type": "drop-off"
+    }, headers={"Authorization": f"Bearer {user_token}"})
     
     # 管理员提出时间段
     start_time = datetime.now() + timedelta(hours=1)
@@ -877,6 +907,16 @@ def test_store_bicycle_in_inventory(client, user_token, admin_token):
         "price": 120
     }, headers={"Authorization": f"Bearer {user_token}"})
     bike_id = bike_response.json()["id"]
+    
+    # 管理员审核自行车
+    approve_response = client.put(f"/bicycles/{bike_id}/approve", headers={"Authorization": f"Bearer {admin_token}"})
+    assert approve_response.json()["status"] == "IN_STOCK"
+    
+    # 用户创建预约（drop-off = 卖家流程）
+    apt_response = client.post("/appointments/", json={
+        "bicycle_id": bike_id,
+        "type": "drop-off"
+    }, headers={"Authorization": f"Bearer {user_token}"})
     
     # 管理员提出时间段
     start_time = datetime.now() + timedelta(hours=1)

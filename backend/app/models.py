@@ -139,3 +139,16 @@ class Review(Base):
 
     appointment = relationship("Appointment")
     reviewer = relationship("User")
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    sender_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
+    receiver_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
+    content = Column(Text, nullable=False)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+    sender = relationship("User", foreign_keys=[sender_id])
+    receiver = relationship("User", foreign_keys=[receiver_id])

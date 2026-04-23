@@ -118,6 +118,22 @@ class ReviewResponse(ReviewBase):
     class Config:
         from_attributes = True
 
+class MessageBase(BaseModel):
+    content: str = Field(..., min_length=1, max_length=2000)
+
+class MessageCreate(MessageBase):
+    receiver_id: UUID
+
+class MessageResponse(MessageBase):
+    id: UUID
+    sender_id: UUID
+    receiver_id: UUID
+    is_read: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
 class PostBase(BaseModel):
     title: str = Field(..., max_length=200)
     content: str

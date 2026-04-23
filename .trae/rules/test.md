@@ -1,1 +1,5 @@
 - 每次修改后，等推送到github，后端部署完成后，自己完成测试。
+- 后端render api： rnd_PikBeUTpV99ai6DBbtI4ubTxeHTu
+- render数据库： 
+  - internal URL: postgresql://pku_cycle_db_qre8_user:xlZcWErBt7G5AVOq1ZjXLlv8v0K7v4wj@dpg-d7j3f3l7vvec73ahgetg-a/pku_cycle_db_qre8;
+  - external URL: postgresql://pku_cycle_db_qre8_user:xlZcWErBt7G5AVOq1ZjXLlv8v0K7v4wj@dpg-d7j3f3l7vvec73ahgetg-a.oregon-postgres.render.com/pku_cycle_db_qre8

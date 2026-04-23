@@ -260,3 +260,53 @@ def confirm_pickup(
     db.commit()
     db.refresh(appointment)
     return appointment
+
+@appointment_router.put("/{apt_id}/cancel", response_model=AppointmentResponse)
+def cancel_appointment(
+    apt_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """用户取消预约"""
+    appointment = db.query(Appointment).filter(Appointment.id == apt_id).first()
+    if not appointment:
+        raise HTTPException(status_code=404, detail="预约不存在")
+    
+    # 验证是预约所有者
+    if str(appointment.user_id) != current_user["user_id"]:
+        raise HTTPException(status_code=403, detail="无权限取消此预约")
+    
+    # 只有 PENDING 或 CONFIRMED 状态可以取消
+    if appointment.status not in [AppointmentStatus.PENDING.value, AppointmentStatus.CONFIRMED.value]:
+        raise HTTPException(status_code=400, detail="当前状态无法取消")
+    
+    appointment.status = AppointmentStatus.CANCELLED.value
+    # 释放自行车
+    bike = db.query(Bicycle).filter(Bicycle.id == appointment.bicycle_id).first()
+    if bike and bike.status == BicycleStatus.LOCKED.value:
+        bike.status = BicycleStatus.IN_STOCK.value
+    db.commit()
+    db.refresh(appointment)
+    return appointment
+
+@appointment_router.put("/{apt_id}/reject", response_model=AppointmentResponse)
+def reject_appointment(
+    apt_id: UUID,
+    reject_reason: str,
+    current_user: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """管理员拒绝预约并给出理由"""
+    appointment = db.query(Appointment).filter(Appointment.id == apt_id).first()
+    if not appointment:
+        raise HTTPException(status_code=404, detail="预约不存在")
+    
+    appointment.status = AppointmentStatus.CANCELLED.value
+    # 释放自行车
+    bike = db.query(Bicycle).filter(Bicycle.id == appointment.bicycle_id).first()
+    if bike and bike.status == BicycleStatus.LOCKED.value:
+        bike.status = BicycleStatus.IN_STOCK.value
+    db.commit()
+    db.refresh(appointment)
+    # TODO: 发送通知给用户（可以通过私信系统）
+    return appointment

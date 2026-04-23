@@ -131,8 +131,8 @@ class MessageCreate(MessageBase):
 
 class MessageResponse(MessageBase):
     id: UUID
-    sender_id: UUID
-    receiver_id: UUID
+    sender_id: Optional[UUID] = None
+    receiver_id: Optional[UUID] = None
     is_read: bool
     created_at: datetime
 

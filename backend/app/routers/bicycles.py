@@ -679,7 +679,7 @@ def get_admin_dashboard(
                 "brand": bike.brand,
                 "owner_id": str(bike.owner_id),
                 "status": bike.status,
-                "time_slot_id": str(bike.time_slot_id) if bike.time_slot_id else None,
+                "time_slot_id": str(db.query(TimeSlot).filter(TimeSlot.bicycle_id == bike.id, TimeSlot.is_booked == "false").first().id) if db.query(TimeSlot).filter(TimeSlot.bicycle_id == bike.id, TimeSlot.is_booked == "false").first() else None,
                 "created_at": bike.created_at.isoformat() if bike.created_at else None
             } for bike in waiting_bicycles
         ],

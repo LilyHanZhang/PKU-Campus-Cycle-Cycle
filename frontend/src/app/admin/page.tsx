@@ -53,7 +53,115 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleProposeTimeSlots = async (bikeId: string) => {
+    const token = localStorage.getItem("access_token");
+    
+    // 创建多个时间段输入框
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = `
+      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 9999; max-height: 80vh; overflow-y: auto; min-width: 400px;">
+        <h3 style="margin-bottom: 15px; font-size: 18px; font-weight: bold;">为卖家提出时间段</h3>
+        <p style="margin-bottom: 10px; color: #666; font-size: 14px;">请至少提出 1 个时间段（可添加多个）</p>
+        <div id="slotsContainer" style="max-height: 300px; overflow-y: auto; margin-bottom: 15px;"></div>
+        <button id="addSlotBtn" style="width: 100%; padding: 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 15px;">+ 添加时间段</button>
+        <div style="display: flex; gap: 10px;">
+          <button id="submitBtn" style="flex: 1; padding: 10px; background: #2ab26a; color: white; border: none; border-radius: 4px; cursor: pointer;">提交</button>
+          <button id="cancelBtn" style="flex: 1; padding: 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">取消</button>
+        </div>
+      </div>
+      <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9998;"></div>
+    `;
+    document.body.appendChild(tempDiv);
+
+    const slotsContainer = document.getElementById('slotsContainer')!;
+    let slotCount = 0;
+
+    const addSlotInput = () => {
+      slotCount++;
+      const slotDiv = document.createElement('div');
+      slotDiv.className = 'slot-input';
+      slotDiv.style.cssText = 'margin-bottom: 10px; padding: 10px; background: #f9fafb; border-radius: 4px;';
+      slotDiv.innerHTML = `
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <div style="flex: 1;">
+            <label style="display: block; margin-bottom: 5px; font-size: 13px;">开始时间：</label>
+            <input type="datetime-local" class="startTime" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;" />
+          </div>
+          <div style="flex: 1;">
+            <label style="display: block; margin-bottom: 5px; font-size: 13px;">结束时间：</label>
+            <input type="datetime-local" class="endTime" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;" />
+          </div>
+          ${slotCount > 1 ? '<button class="removeSlot" style="padding: 6px 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">×</button>' : ''}
+        </div>
+      `;
+      slotsContainer.appendChild(slotDiv);
+
+      // 移除按钮事件
+      const removeBtn = slotDiv.querySelector('.removeSlot');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', () => {
+          if (slotsContainer.children.length > 1) {
+            slotsContainer.removeChild(slotDiv);
+          } else {
+            alert("至少需要一个时间段");
+          }
+        });
+      }
+    };
+
+    // 添加第一个时间段
+    addSlotInput();
+
+    const addSlotBtn = document.getElementById('addSlotBtn');
+    addSlotBtn?.addEventListener('click', addSlotInput);
+
+    const cancelBtn = document.getElementById('cancelBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    const cleanup = () => {
+      document.body.removeChild(tempDiv);
+    };
+
+    cancelBtn?.addEventListener('click', cleanup);
+
+    submitBtn?.addEventListener('click', async () => {
+      const startTimeInputs = document.querySelectorAll('.startTime') as NodeListOf<HTMLInputElement>;
+      const endTimeInputs = document.querySelectorAll('.endTime') as NodeListOf<HTMLInputElement>;
+      
+      const timeSlots = [];
+      for (let i = 0; i < startTimeInputs.length; i++) {
+        const startTime = startTimeInputs[i].value;
+        const endTime = endTimeInputs[i].value;
+        
+        if (!startTime || !endTime) {
+          alert("请填写所有时间段");
+          return;
+        }
+        
+        timeSlots.push({
+          start_time: new Date(startTime).toISOString(),
+          end_time: new Date(endTime).toISOString()
+        });
+      }
+
+      try {
+        await axios.post(
+          `${API_URL}/bicycles/${bikeId}/propose-slots`,
+          timeSlots,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        alert(`已提出 ${timeSlots.length} 个时间段，等待卖家选择！`);
+        cleanup();
+        fetchData();
+      } catch (err: any) {
+        console.error("Failed to propose time slots", err);
+        alert(`操作失败：${err.response?.data?.detail || "请重试"}`);
+      }
+    });
+  };
+
   const handleApprove = async (bikeId: string) => {
+    // 买家场景：直接批准上架
     const token = localStorage.getItem("access_token");
     try {
       await axios.put(`${API_URL}/bicycles/${bikeId}/approve`, {}, {
@@ -97,20 +205,19 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleAddTimeSlot = async (bicycleId: string, appointmentType: string) => {
+  const handleProposeAppointmentSlots = async (aptId: string) => {
     const token = localStorage.getItem("access_token");
     
-    // 创建一个临时的 div 来显示时间选择器
+    // 创建多个时间段输入框
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = `
-      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 9999;">
-        <h3 style="margin-bottom: 15px; font-size: 18px; font-weight: bold;">添加时间段</h3>
-        <label style="display: block; margin-bottom: 5px;">开始时间：</label>
-        <input type="datetime-local" id="startTime" style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;" />
-        <label style="display: block; margin-bottom: 5px;">结束时间：</label>
-        <input type="datetime-local" id="endTime" style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;" />
+      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 9999; max-height: 80vh; overflow-y: auto; min-width: 400px;">
+        <h3 style="margin-bottom: 15px; font-size: 18px; font-weight: bold;">为买家预约提出时间段</h3>
+        <p style="margin-bottom: 10px; color: #666; font-size: 14px;">请至少提出 1 个时间段（可添加多个）</p>
+        <div id="slotsContainer" style="max-height: 300px; overflow-y: auto; margin-bottom: 15px;"></div>
+        <button id="addSlotBtn" style="width: 100%; padding: 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 15px;">+ 添加时间段</button>
         <div style="display: flex; gap: 10px;">
-          <button id="confirmBtn" style="flex: 1; padding: 10px; background: #2ab26a; color: white; border: none; border-radius: 4px; cursor: pointer;">确认</button>
+          <button id="submitBtn" style="flex: 1; padding: 10px; background: #2ab26a; color: white; border: none; border-radius: 4px; cursor: pointer;">提交</button>
           <button id="cancelBtn" style="flex: 1; padding: 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">取消</button>
         </div>
       </div>
@@ -118,8 +225,48 @@ export default function AdminDashboard() {
     `;
     document.body.appendChild(tempDiv);
 
-    const confirmBtn = document.getElementById('confirmBtn');
+    const slotsContainer = document.getElementById('slotsContainer')!;
+    let slotCount = 0;
+
+    const addSlotInput = () => {
+      slotCount++;
+      const slotDiv = document.createElement('div');
+      slotDiv.className = 'slot-input';
+      slotDiv.style.cssText = 'margin-bottom: 10px; padding: 10px; background: #f9fafb; border-radius: 4px;';
+      slotDiv.innerHTML = `
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <div style="flex: 1;">
+            <label style="display: block; margin-bottom: 5px; font-size: 13px;">开始时间：</label>
+            <input type="datetime-local" class="startTime" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;" />
+          </div>
+          <div style="flex: 1;">
+            <label style="display: block; margin-bottom: 5px; font-size: 13px;">结束时间：</label>
+            <input type="datetime-local" class="endTime" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;" />
+          </div>
+          ${slotCount > 1 ? '<button class="removeSlot" style="padding: 6px 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">×</button>' : ''}
+        </div>
+      `;
+      slotsContainer.appendChild(slotDiv);
+
+      const removeBtn = slotDiv.querySelector('.removeSlot');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', () => {
+          if (slotsContainer.children.length > 1) {
+            slotsContainer.removeChild(slotDiv);
+          } else {
+            alert("至少需要一个时间段");
+          }
+        });
+      }
+    };
+
+    addSlotInput();
+
+    const addSlotBtn = document.getElementById('addSlotBtn');
+    addSlotBtn?.addEventListener('click', addSlotInput);
+
     const cancelBtn = document.getElementById('cancelBtn');
+    const submitBtn = document.getElementById('submitBtn');
     
     const cleanup = () => {
       document.body.removeChild(tempDiv);
@@ -127,32 +274,38 @@ export default function AdminDashboard() {
 
     cancelBtn?.addEventListener('click', cleanup);
 
-    confirmBtn?.addEventListener('click', async () => {
-      const startTimeInput = (document.getElementById('startTime') as HTMLInputElement).value;
-      const endTimeInput = (document.getElementById('endTime') as HTMLInputElement).value;
+    submitBtn?.addEventListener('click', async () => {
+      const startTimeInputs = document.querySelectorAll('.startTime') as NodeListOf<HTMLInputElement>;
+      const endTimeInputs = document.querySelectorAll('.endTime') as NodeListOf<HTMLInputElement>;
       
-      if (!startTimeInput || !endTimeInput) {
-        alert("请选择开始和结束时间");
-        return;
+      const timeSlots = [];
+      for (let i = 0; i < startTimeInputs.length; i++) {
+        const startTime = startTimeInputs[i].value;
+        const endTime = endTimeInputs[i].value;
+        
+        if (!startTime || !endTime) {
+          alert("请填写所有时间段");
+          return;
+        }
+        
+        timeSlots.push({
+          start_time: new Date(startTime).toISOString(),
+          end_time: new Date(endTime).toISOString()
+        });
       }
 
       try {
         await axios.post(
-          `${API_URL}/time_slots/`,
-          {
-            bicycle_id: bicycleId,
-            appointment_type: appointmentType,
-            start_time: new Date(startTimeInput).toISOString(),
-            end_time: new Date(endTimeInput).toISOString(),
-          },
+          `${API_URL}/appointments/${aptId}/propose-slots`,
+          timeSlots,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        alert("时间段添加成功！");
+        alert(`已提出 ${timeSlots.length} 个时间段，等待买家选择！`);
         cleanup();
         fetchData();
-      } catch (err) {
-        console.error("Failed to add time slot", err);
-        alert("操作失败，请重试。");
+      } catch (err: any) {
+        console.error("Failed to propose time slots", err);
+        alert(`操作失败：${err.response?.data?.detail || "请重试"}`);
       }
     });
   };
@@ -247,35 +400,43 @@ export default function AdminDashboard() {
               <div className="bg-white rounded-2xl shadow-xl p-8">
                 <h2 className="text-2xl font-bold text-gray-800 mb-6">待审核车辆</h2>
                 {pendingBikes.length > 0 ? (
-                  <div className="space-y-4">
-                    {pendingBikes.map((bike: any) => (
-                      <div key={bike.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                        <div>
-                          <p className="font-bold text-gray-700">{bike.brand}</p>
-                          <p className="text-sm text-gray-500">
-                            车主 ID: {bike.owner_id?.substring(0, 8)}... | 价格：¥{bike.price} | 成色：{bike.condition}/10
-                          </p>
-                        </div>
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleApprove(bike.id)}
-                            className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition"
-                          >
-                            批准上架
-                          </button>
-                          <button
-                            onClick={() => handleReject(bike.id)}
-                            className="bg-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-600 transition"
-                          >
-                            拒绝
-                          </button>
-                        </div>
+                      <div className="space-y-4">
+                        {pendingBikes.map((bike: any) => (
+                          <div key={bike.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                            <div>
+                              <p className="font-bold text-gray-700">{bike.brand}</p>
+                              <p className="text-sm text-gray-500">
+                                车主 ID: {bike.owner_id?.substring(0, 8)}... | 价格：¥{bike.price} | 成色：{bike.condition}/10
+                              </p>
+                            </div>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => handleProposeTimeSlots(bike.id)}
+                                className="bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-600 transition"
+                                title="卖家场景：提出时间段，等待卖家选择"
+                              >
+                                提出时间段
+                              </button>
+                              <button
+                                onClick={() => handleApprove(bike.id)}
+                                className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition"
+                                title="买家场景：直接批准上架"
+                              >
+                                批准上架
+                              </button>
+                              <button
+                                onClick={() => handleReject(bike.id)}
+                                className="bg-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-600 transition"
+                              >
+                                拒绝
+                              </button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500">当前没有待审核的车辆。</p>
-                )}
+                    ) : (
+                      <p className="text-gray-500">当前没有待审核的车辆。</p>
+                    )}
               </div>
             )}
 
@@ -395,12 +556,17 @@ export default function AdminDashboard() {
                       {/* 时间段管理 */}
                       <div className="mt-3 pt-3 border-t border-gray-200">
                         <p className="text-sm font-bold text-gray-600 mb-2">时间段管理：</p>
-                        <button
-                          onClick={() => handleAddTimeSlot(apt.bicycle_id, apt.type)}
-                          className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-600 transition"
-                        >
-                          添加时间段
-                        </button>
+                        {apt.status === 'PENDING' && (
+                          <button
+                            onClick={() => handleProposeAppointmentSlots(apt.id)}
+                            className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-600 transition"
+                          >
+                            提出时间段
+                          </button>
+                        )}
+                        {apt.status === 'CONFIRMED' && (
+                          <p className="text-sm text-gray-500">时间段已确认，等待交易完成</p>
+                        )}
                       </div>
                     </div>
                   ))}

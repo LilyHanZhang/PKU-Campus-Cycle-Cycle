@@ -520,3 +520,79 @@ def test_admin_reject_appointment(client, user_token, admin_token):
     
     assert reject_response.status_code == 200
     assert reject_response.json()["status"] == "CANCELLED"
+
+# ==================== New Time Slot Proposal Flow Tests ====================
+
+def test_admin_propose_time_slots_for_seller(client, user_token, admin_token):
+    """测试管理员为卖家登记提出时间段（新流程）"""
+    # 卖家登记自行车
+    bike_response = client.post("/bicycles/", json={
+        "brand": "Seller Flow Bike",
+        "condition": 8,
+        "price": 100
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    bike_id = bike_response.json()["id"]
+    
+    # 管理员提出多个时间段
+    start_time1 = datetime.now() + timedelta(hours=1)
+    end_time1 = datetime.now() + timedelta(hours=2)
+    start_time2 = datetime.now() + timedelta(hours=3)
+    end_time2 = datetime.now() + timedelta(hours=4)
+    
+    propose_response = client.post(
+        f"/bicycles/{bike_id}/propose-slots",
+        json=[
+            {"start_time": start_time1.isoformat(), "end_time": end_time1.isoformat()},
+            {"start_time": start_time2.isoformat(), "end_time": end_time2.isoformat()}
+        ],
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    
+    assert propose_response.status_code == 200
+    data = propose_response.json()
+    assert "slots" in data
+    assert len(data["slots"]) == 2
+    assert data["message"] == "已提出 2 个时间段，等待卖家选择"
+    
+    # 验证自行车状态变为 LOCKED
+    bike_status_response = client.get(f"/bicycles/{bike_id}", headers={"Authorization": f"Bearer {admin_token}"})
+    assert bike_status_response.json()["status"] == "LOCKED"
+
+def test_admin_propose_time_slots_for_buyer(client, user_token, admin_token):
+    """测试管理员为买家预约提出时间段（新流程）"""
+    # 管理员创建并批准自行车
+    bike_response = client.post("/bicycles/", json={
+        "brand": "Buyer Flow Bike",
+        "condition": 7,
+        "price": 80
+    }, headers={"Authorization": f"Bearer {admin_token}"})
+    bike_id = bike_response.json()["id"]
+    
+    client.put(f"/bicycles/{bike_id}/approve", headers={"Authorization": f"Bearer {admin_token}"})
+    
+    # 买家创建预约
+    apt_response = client.post("/appointments/", json={
+        "bicycle_id": bike_id,
+        "type": "pick-up"
+    }, headers={"Authorization": f"Bearer {user_token}"})
+    apt_id = apt_response.json()["id"]
+    
+    # 管理员为预约提出时间段
+    start_time = datetime.now() + timedelta(hours=2)
+    end_time = datetime.now() + timedelta(hours=3)
+    
+    propose_response = client.post(
+        f"/appointments/{apt_id}/propose-slots",
+        json=[
+            {"start_time": start_time.isoformat(), "end_time": end_time.isoformat()}
+        ],
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    
+    assert propose_response.status_code == 200
+    data = propose_response.json()
+    assert "slots" in data
+    assert len(data["slots"]) == 1
+    assert data["message"] == "已提出 1 个时间段，等待买家选择"
+
+

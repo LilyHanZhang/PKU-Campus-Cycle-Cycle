@@ -89,6 +89,7 @@ def approve_bicycle(
     current_user: dict = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
+    """管理员批准自行车（仅用于买家预约的场景）"""
     bike = db.query(Bicycle).filter(Bicycle.id == bike_id).first()
     if not bike:
         raise HTTPException(status_code=404, detail="自行车不存在")
@@ -97,6 +98,59 @@ def approve_bicycle(
     db.commit()
     db.refresh(bike)
     return bike
+
+@router.post("/{bike_id}/propose-slots", response_model=dict)
+def propose_time_slots(
+    bike_id: UUID,
+    time_slots: List[dict],
+    current_user: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """管理员为卖家登记的自行车提出时间段（卖家场景）"""
+    bike = db.query(Bicycle).filter(Bicycle.id == bike_id).first()
+    if not bike:
+        raise HTTPException(status_code=404, detail="自行车不存在")
+    
+    if bike.status != BicycleStatus.PENDING_APPROVAL.value:
+        raise HTTPException(status_code=400, detail="自行车状态不正确")
+    
+    from ..models import TimeSlot
+    from datetime import datetime
+    
+    # 创建时间段
+    created_slots = []
+    for slot_data in time_slots:
+        time_slot = TimeSlot(
+            bicycle_id=bike_id,
+            appointment_type="pick-up",  # 卖家取车
+            start_time=datetime.fromisoformat(slot_data["start_time"]),
+            end_time=datetime.fromisoformat(slot_data["end_time"]),
+            is_booked="false"
+        )
+        db.add(time_slot)
+        created_slots.append({
+            "id": str(time_slot.id),
+            "start_time": slot_data["start_time"],
+            "end_time": slot_data["end_time"]
+        })
+    
+    # 更新自行车状态为待处理（等待卖家选择时间段）
+    bike.status = BicycleStatus.LOCKED.value
+    db.commit()
+    
+    # TODO: 发送私信通知卖家
+    try:
+        from ..routers.messages import send_message_to_user
+        send_message_to_user(
+            db=db,
+            sender_id=None,
+            receiver_id=bike.owner_id,
+            content=f"管理员已为您的自行车登记提出 {len(time_slots)} 个可选时间段，请及时选择。"
+        )
+    except:
+        pass
+    
+    return {"message": f"已提出 {len(time_slots)} 个时间段，等待卖家选择", "slots": created_slots}
 
 @router.put("/{bike_id}/reject", response_model=BicycleResponse)
 def reject_bicycle(
@@ -162,6 +216,57 @@ def create_appointment(
     db.commit()
     db.refresh(db_appointment)
     return db_appointment
+
+@appointment_router.post("/{apt_id}/propose-slots", response_model=dict)
+def propose_appointment_slots(
+    apt_id: UUID,
+    time_slots: List[dict],
+    current_user: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """管理员为买家预约提出时间段（买家场景）"""
+    appointment = db.query(Appointment).filter(Appointment.id == apt_id).first()
+    if not appointment:
+        raise HTTPException(status_code=404, detail="预约不存在")
+    
+    if appointment.status != AppointmentStatus.PENDING.value:
+        raise HTTPException(status_code=400, detail="预约状态不正确")
+    
+    from ..models import TimeSlot
+    from datetime import datetime
+    
+    # 创建时间段
+    created_slots = []
+    for slot_data in time_slots:
+        time_slot = TimeSlot(
+            bicycle_id=appointment.bicycle_id,
+            appointment_type=appointment.type,  # 买家取车
+            start_time=datetime.fromisoformat(slot_data["start_time"]),
+            end_time=datetime.fromisoformat(slot_data["end_time"]),
+            is_booked="false"
+        )
+        db.add(time_slot)
+        created_slots.append({
+            "id": str(time_slot.id),
+            "start_time": slot_data["start_time"],
+            "end_time": slot_data["end_time"]
+        })
+    
+    db.commit()
+    
+    # 发送私信通知买家
+    try:
+        from ..routers.messages import send_message_to_user
+        send_message_to_user(
+            db=db,
+            sender_id=None,
+            receiver_id=appointment.user_id,
+            content=f"管理员已为您的预约提出 {len(time_slots)} 个可选时间段，请及时选择。"
+        )
+    except:
+        pass
+    
+    return {"message": f"已提出 {len(time_slots)} 个时间段，等待买家选择", "slots": created_slots}
 
 @appointment_router.get("/", response_model=List[AppointmentResponse])
 def list_appointments(

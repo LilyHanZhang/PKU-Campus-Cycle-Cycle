@@ -126,7 +126,7 @@ def propose_time_slots(
     current_user: dict = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
-    """管理员为卖家登记的自行车提出时间段（卖家场景）"""
+    """管理员为自行车提出时间段（支持卖家和买家场景）"""
     bike = db.query(Bicycle).filter(Bicycle.id == bike_id).first()
     if not bike:
         raise HTTPException(status_code=404, detail="自行车不存在")
@@ -135,15 +135,29 @@ def propose_time_slots(
     if bike.status != BicycleStatus.IN_STOCK.value:
         raise HTTPException(status_code=400, detail="自行车状态不正确，需要先审核通过")
     
-    from ..models import TimeSlot
+    # 检查是否有相关的预约
+    from ..models import Appointment, TimeSlot
     from datetime import datetime
+    
+    appointment = db.query(Appointment).filter(
+        Appointment.bicycle_id == bike_id,
+        Appointment.status == "PENDING"
+    ).first()
+    
+    if not appointment:
+        raise HTTPException(status_code=400, detail="该自行车没有待处理的预约")
+    
+    # 根据预约类型设置 appointment_type
+    # drop-off = 卖家流程（卖家把车送来，管理员取车）
+    # pick-up = 买家流程（买家来取车）
+    appointment_type = "pick-up" if appointment.type == "drop-off" else "drop-off"
     
     # 创建时间段
     created_slots = []
     for slot_data in time_slots:
         time_slot = TimeSlot(
             bicycle_id=bike_id,
-            appointment_type="pick-up",  # 卖家取车
+            appointment_type=appointment_type,
             start_time=datetime.fromisoformat(slot_data["start_time"]),
             end_time=datetime.fromisoformat(slot_data["end_time"]),
             is_booked="false"

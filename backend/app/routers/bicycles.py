@@ -138,17 +138,20 @@ def propose_time_slots(
     bike.status = BicycleStatus.LOCKED.value
     db.commit()
     
-    # TODO: 发送私信通知卖家
+    # 发送私信通知卖家
     try:
         from ..routers.messages import send_message_to_user
+        # 使用管理员 ID 作为发送者
+        from uuid import UUID
+        admin_id = UUID(current_user["user_id"]) if isinstance(current_user["user_id"], str) else current_user["user_id"]
         send_message_to_user(
             db=db,
-            sender_id=None,
+            sender_id=admin_id,
             receiver_id=bike.owner_id,
-            content=f"管理员已为您的自行车登记提出 {len(time_slots)} 个可选时间段，请及时选择。"
+            content=f"管理员已为您的自行车登记提出 {len(time_slots)} 个可选时间段，请及时登录个人中心 - 时间段选择页面进行选择。"
         )
-    except:
-        pass
+    except Exception as e:
+        print(f"Failed to send notification: {e}")
     
     return {"message": f"已提出 {len(time_slots)} 个时间段，等待卖家选择", "slots": created_slots}
 
@@ -257,14 +260,17 @@ def propose_appointment_slots(
     # 发送私信通知买家
     try:
         from ..routers.messages import send_message_to_user
+        # 使用管理员 ID 作为发送者
+        from uuid import UUID
+        admin_id = UUID(current_user["user_id"]) if isinstance(current_user["user_id"], str) else current_user["user_id"]
         send_message_to_user(
             db=db,
-            sender_id=None,
+            sender_id=admin_id,
             receiver_id=appointment.user_id,
-            content=f"管理员已为您的预约提出 {len(time_slots)} 个可选时间段，请及时选择。"
+            content=f"管理员已为您的预约提出 {len(time_slots)} 个可选时间段，请及时登录个人中心 - 时间段选择页面进行选择。"
         )
-    except:
-        pass
+    except Exception as e:
+        print(f"Failed to send notification: {e}")
     
     return {"message": f"已提出 {len(time_slots)} 个时间段，等待买家选择", "slots": created_slots}
 

@@ -1,14 +1,18 @@
-## 完成时间线
-卖家登记车信息 -> **管理员收到车信息之后，可以拒绝交易并给出理由；也可以提出若干（>=1）管理员有空闲的时间段 -> 卖家收到通知，可以从中选择一个时间段 -> 管理员确认卖家选择的时间段 -> 卖家收到通知，双方进行线下交易** -> 管理员确认交易，自行车入库；**卖家收到提醒，可以进行评价**
-买家选择库中自行车 -> 自行车暂时锁定 -> 管理员收到车信息之后，可以拒绝交易并给出理由；提出若干（>=1）管理员有空闲的时间段 -> **买家收到通知，可以从中选择一个时间段 -> 管理员确认卖家选择的时间段 -> 买家收到通知，双方进行线下交易**；买家收到提醒，可以进行评价
+## Completion Timeline
 
-在卖家/买家登记到线下交易的时间段内，卖家/买家随时都能取消交易，管理员也可以随时拒绝交易，并给出理由。在管理月提出时间段，到进行线下交易的同时，也可以更改时间段。重新通知用户，用户可以根据新的时间段进行交易。
+Seller registers car information -> **After receiving the car information, the admin can reject the transaction and provide a reason; the admin can also propose several (>=1) time slots when the admin is available -> The seller receives a notification and can choose one of the time slots -> The admin confirms the time slot chosen by the seller -> The seller receives a notification, and both parties proceed with the offline transaction** -> The admin confirms the transaction, and the bicycle is added to the inventory; **the seller receives a reminder and can leave a review**
 
-## 增加功能
-- 增加私信功能。管理员可以和卖家/买家进行私信。卖家和买家也可以和所有管理员进行私信。
-- 在主页增加一个模块，用户和管理员如果已经选择了时间段，可以在模块中显示还有多少时间进行交易；若还未选择时间段，则只显示有未完成的交易。
+Buyer selects a bicycle from the inventory -> The bicycle is temporarily locked -> After receiving the bicycle information, the admin can reject the transaction and provide a reason; the admin proposes several (>=1) available time slots -> **The buyer receives a notification and can choose one of the time slots -> The admin confirms the time slot chosen by the buyer -> The buyer receives a notification, and both parties proceed with the offline transaction**; the buyer receives a reminder and can leave a review
 
-## 页面美化
-- 选择时间段时，增加一个日历、时间，可以在这上面选择时间段。
-- 页面背景可以用相关的图片进行美观。
+During the period from when the seller/buyer registers until the offline transaction takes place, the seller/buyer can cancel the transaction at any time, and the admin can also reject the transaction at any time, providing a reason. From the time the admin proposes time slots to the actual offline transaction, the time slot can also be changed. The user will be notified again, and the user can proceed with the transaction based on the new time slot.
+
+## Additional Features
+
+- Add a private messaging feature. Admins can send private messages to sellers/buyers. Sellers and buyers can also send private messages to any admin.
+- Add a module on the homepage. If the user and admin have already selected a time slot, the module will display how much time remains until the transaction; if no time slot has been selected yet, it will simply show that there are pending transactions.
+
+## Page Beautification
+
+- When selecting a time slot, add a calendar and time picker to allow users to choose the time slot.
+- The page background can be enhanced with relevant images.
 

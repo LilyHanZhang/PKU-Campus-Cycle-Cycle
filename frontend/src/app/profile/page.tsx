@@ -134,6 +134,10 @@ export default function ProfilePage() {
         <div className="flex items-center justify-between mb-12">
           <h1 className="text-4xl font-extrabold text-[#1f874c]">个人中心</h1>
           <div className="flex items-center space-x-4">
+            <Link href="/my-time-slots" className="text-emerald-600 font-bold hover:underline flex items-center">
+              <Calendar className="w-4 h-4 mr-1" />
+              时间段选择
+            </Link>
             <Link href="/" className="text-emerald-600 font-bold hover:underline">返回首页</Link>
             <button onClick={handleLogout} className="flex items-center space-x-2 text-red-500 hover:text-red-600">
               <LogOut size={18} />

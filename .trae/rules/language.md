@@ -1,0 +1,1 @@
+The language on the website should be Chinese. Other things that do not appear directly on the website could be in English. (e.g. the .md files, the code files should be in English).

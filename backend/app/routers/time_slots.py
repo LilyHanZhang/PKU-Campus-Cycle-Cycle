@@ -3,13 +3,17 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
+from pydantic import BaseModel
 
 from ..database import get_db
-from ..models import TimeSlot, Appointment, Bicycle, Review, AppointmentStatus
+from ..models import TimeSlot, Appointment, Bicycle, Review, AppointmentStatus, BicycleStatus
 from ..schemas import TimeSlotCreate, TimeSlotResponse, ReviewCreate, ReviewResponse, TimeSlotUpdate
 from ..auth import get_current_user, get_current_admin
 
 router = APIRouter(prefix="/time_slots", tags=["时间段管理"])
+
+class TimeSlotSelection(BaseModel):
+    time_slot_id: UUID
 
 @router.get("/", response_model=List[TimeSlotResponse])
 def list_time_slots(
@@ -73,6 +77,29 @@ def delete_time_slot(
     db.commit()
     return {"message": "删除成功"}
 
+@router.get("/bicycle/{bike_id}", response_model=List[TimeSlotResponse])
+def get_bicycle_time_slots(
+    bike_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """获取自行车的可选时间段（卖家场景）"""
+    from ..models import Bicycle
+    bicycle = db.query(Bicycle).filter(Bicycle.id == bike_id).first()
+    if not bicycle:
+        raise HTTPException(status_code=404, detail="自行车不存在")
+    
+    # 只有自行车所有者或管理员可以查看
+    if str(bicycle.owner_id) != current_user["user_id"] and current_user["role"] not in ["ADMIN", "SUPER_ADMIN"]:
+        raise HTTPException(status_code=403, detail="无权限查看")
+    
+    time_slots = db.query(TimeSlot).filter(
+        TimeSlot.bicycle_id == bike_id,
+        TimeSlot.is_booked == "false"
+    ).all()
+    
+    return time_slots
+
 @router.get("/appointment/{apt_id}", response_model=List[TimeSlotResponse])
 def get_available_time_slots(
     apt_id: UUID,
@@ -99,11 +126,11 @@ def get_available_time_slots(
 @router.put("/select/{apt_id}", response_model=dict)
 def select_time_slot(
     apt_id: UUID,
-    time_slot_id: UUID,
+    selection: TimeSlotSelection,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """用户选择时间段，等待管理员确认"""
+    """用户选择时间段，等待管理员确认（买家场景）"""
     appointment = db.query(Appointment).filter(Appointment.id == apt_id).first()
     if not appointment:
         raise HTTPException(status_code=404, detail="预约不存在")
@@ -112,7 +139,7 @@ def select_time_slot(
     if str(appointment.user_id) != current_user["user_id"]:
         raise HTTPException(status_code=403, detail="无权限修改此预约")
     
-    time_slot = db.query(TimeSlot).filter(TimeSlot.id == time_slot_id).first()
+    time_slot = db.query(TimeSlot).filter(TimeSlot.id == selection.time_slot_id).first()
     if not time_slot:
         raise HTTPException(status_code=404, detail="时间段不存在")
     
@@ -120,12 +147,12 @@ def select_time_slot(
         raise HTTPException(status_code=400, detail="时间段已被预订")
     
     # 更新预约的时间段，但状态保持 PENDING，等待管理员确认
-    appointment.time_slot_id = time_slot_id
+    appointment.time_slot_id = selection.time_slot_id
     # 状态改为 PENDING，等待管理员确认
     appointment.status = AppointmentStatus.PENDING.value
     db.commit()
     
-    # TODO: 发送私信通知管理员确认
+    # 发送私信通知管理员确认
     from ..routers.messages import send_message_to_user
     try:
         # 获取所有管理员
@@ -137,6 +164,53 @@ def select_time_slot(
                 sender_id=None,  # 系统消息
                 receiver_id=admin.id,
                 content=f"用户已选择时间段，请确认。预约 ID: {apt_id}"
+            )
+    except:
+        pass
+    
+    return {"message": "时间段选择成功，等待管理员确认"}
+
+@router.put("/select-bicycle/{bike_id}", response_model=dict)
+def select_bicycle_time_slot(
+    bike_id: UUID,
+    selection: TimeSlotSelection,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """卖家选择时间段，等待管理员确认（卖家场景）"""
+    bicycle = db.query(Bicycle).filter(Bicycle.id == bike_id).first()
+    if not bicycle:
+        raise HTTPException(status_code=404, detail="自行车不存在")
+    
+    # 验证是自行车所有者
+    if str(bicycle.owner_id) != current_user["user_id"]:
+        raise HTTPException(status_code=403, detail="无权限修改此自行车")
+    
+    time_slot = db.query(TimeSlot).filter(TimeSlot.id == selection.time_slot_id).first()
+    if not time_slot:
+        raise HTTPException(status_code=404, detail="时间段不存在")
+    
+    if time_slot.is_booked == "true":
+        raise HTTPException(status_code=400, detail="时间段已被预订")
+    
+    # 更新自行车的时间段
+    bicycle.time_slot_id = selection.time_slot_id
+    # 状态保持 LOCKED，等待管理员确认
+    bicycle.status = BicycleStatus.LOCKED.value
+    db.commit()
+    
+    # 发送私信通知管理员确认
+    from ..routers.messages import send_message_to_user
+    try:
+        # 获取所有管理员
+        from ..models import User, Role
+        admins = db.query(User).filter(User.role.in_([Role.ADMIN.value, Role.SUPER_ADMIN.value])).all()
+        for admin in admins:
+            send_message_to_user(
+                db=db,
+                sender_id=None,  # 系统消息
+                receiver_id=admin.id,
+                content=f"卖家已选择时间段，请确认。自行车 ID: {bike_id}"
             )
     except:
         pass

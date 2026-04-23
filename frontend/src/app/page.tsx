@@ -68,8 +68,19 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-green-50 flex flex-col items-center p-8">
-      <header className="w-full max-w-5xl flex justify-between items-center mb-12">
+    <div className="min-h-screen flex flex-col items-center p-8 relative overflow-hidden" 
+         style={{
+           backgroundImage: `url('https://images.unsplash.com/photo-1571068316344-75bc76f77890?q=80&w=2070&auto=format&fit=crop')`,
+           backgroundSize: 'cover',
+           backgroundPosition: 'center',
+           backgroundAttachment: 'fixed'
+         }}>
+      {/* Overlay for better readability */}
+      <div className="absolute inset-0 bg-green-50/90 backdrop-blur-sm"></div>
+      
+      {/* Content */}
+      <div className="relative z-10 w-full max-w-5xl">
+      <header className="w-full flex justify-between items-center mb-12">
         <h1 className="text-5xl font-extrabold text-[#1f874c] tracking-tight">
           燕园易骑
         </h1>
@@ -278,6 +289,7 @@ export default function Home() {
           </p>
         </div>
       </section>
+      </div>
     </div>
   );
 }

@@ -58,15 +58,18 @@ export default function AdminDashboard() {
     
     // 创建多个时间段输入框
     const tempDiv = document.createElement('div');
+    const now = new Date();
+    const nowStr = now.toISOString().slice(0, 16); // Format: YYYY-MM-DDTHH:mm
+    
     tempDiv.innerHTML = `
-      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 9999; max-height: 80vh; overflow-y: auto; min-width: 400px;">
-        <h3 style="margin-bottom: 15px; font-size: 18px; font-weight: bold;">为卖家提出时间段</h3>
-        <p style="margin-bottom: 10px; color: #666; font-size: 14px;">请至少提出 1 个时间段（可添加多个）</p>
-        <div id="slotsContainer" style="max-height: 300px; overflow-y: auto; margin-bottom: 15px;"></div>
-        <button id="addSlotBtn" style="width: 100%; padding: 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 15px;">+ 添加时间段</button>
+      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 9999; max-height: 80vh; overflow-y: auto; min-width: 500px;">
+        <h3 style="margin-bottom: 15px; font-size: 20px; font-weight: bold; color: #1f2937;">为卖家提出时间段</h3>
+        <p style="margin-bottom: 15px; color: #6b7280; font-size: 14px; line-height: 1.5;">请至少提出 1 个时间段（可添加多个）<br/>提示：点击日期时间框右侧的小图标，可以选择日期和时间（小时、分钟）</p>
+        <div id="slotsContainer" style="max-height: 350px; overflow-y: auto; margin-bottom: 15px;"></div>
+        <button id="addSlotBtn" style="width: 100%; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: 600;">+ 添加时间段</button>
         <div style="display: flex; gap: 10px;">
-          <button id="submitBtn" style="flex: 1; padding: 10px; background: #2ab26a; color: white; border: none; border-radius: 4px; cursor: pointer;">提交</button>
-          <button id="cancelBtn" style="flex: 1; padding: 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">取消</button>
+          <button id="submitBtn" style="flex: 1; padding: 12px; background: #2ab26a; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">提交</button>
+          <button id="cancelBtn" style="flex: 1; padding: 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">取消</button>
         </div>
       </div>
       <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9998;"></div>
@@ -80,18 +83,18 @@ export default function AdminDashboard() {
       slotCount++;
       const slotDiv = document.createElement('div');
       slotDiv.className = 'slot-input';
-      slotDiv.style.cssText = 'margin-bottom: 10px; padding: 10px; background: #f9fafb; border-radius: 4px;';
+      slotDiv.style.cssText = 'margin-bottom: 12px; padding: 12px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;';
       slotDiv.innerHTML = `
-        <div style="display: flex; gap: 10px; align-items: center;">
+        <div style="display: flex; gap: 12px; align-items: center;">
           <div style="flex: 1;">
-            <label style="display: block; margin-bottom: 5px; font-size: 13px;">开始时间：</label>
-            <input type="datetime-local" class="startTime" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;" />
+            <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">开始时间</label>
+            <input type="datetime-local" class="startTime" min="${nowStr}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
           </div>
           <div style="flex: 1;">
-            <label style="display: block; margin-bottom: 5px; font-size: 13px;">结束时间：</label>
-            <input type="datetime-local" class="endTime" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;" />
+            <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">结束时间</label>
+            <input type="datetime-local" class="endTime" min="${nowStr}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
           </div>
-          ${slotCount > 1 ? '<button class="removeSlot" style="padding: 6px 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">×</button>' : ''}
+          ${slotCount > 1 ? '<button class="removeSlot" style="padding: 8px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold;">×</button>' : ''}
         </div>
       `;
       slotsContainer.appendChild(slotDiv);
@@ -129,19 +132,43 @@ export default function AdminDashboard() {
       const endTimeInputs = document.querySelectorAll('.endTime') as NodeListOf<HTMLInputElement>;
       
       const timeSlots = [];
+      let hasError = false;
+      
       for (let i = 0; i < startTimeInputs.length; i++) {
         const startTime = startTimeInputs[i].value;
         const endTime = endTimeInputs[i].value;
         
-        if (!startTime || !endTime) {
+        // 检查是否为空（使用 trim 去除空格）
+        if (!startTime || !startTime.trim() || !endTime || !endTime.trim()) {
           alert("请填写所有时间段");
-          return;
+          hasError = true;
+          break;
+        }
+        
+        // 验证时间格式
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+          alert("时间格式不正确，请点击日期时间框右侧的图标选择时间");
+          hasError = true;
+          break;
+        }
+        
+        if (start >= end) {
+          alert("开始时间必须早于结束时间");
+          hasError = true;
+          break;
         }
         
         timeSlots.push({
-          start_time: new Date(startTime).toISOString(),
-          end_time: new Date(endTime).toISOString()
+          start_time: start.toISOString(),
+          end_time: end.toISOString()
         });
+      }
+      
+      if (hasError || timeSlots.length === 0) {
+        return;
       }
 
       try {
@@ -150,7 +177,7 @@ export default function AdminDashboard() {
           timeSlots,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        alert(`已提出 ${timeSlots.length} 个时间段，等待卖家选择！`);
+        alert(`✓ 已提出 ${timeSlots.length} 个时间段，等待卖家选择！`);
         cleanup();
         fetchData();
       } catch (err: any) {
@@ -210,15 +237,18 @@ export default function AdminDashboard() {
     
     // 创建多个时间段输入框
     const tempDiv = document.createElement('div');
+    const now = new Date();
+    const nowStr = now.toISOString().slice(0, 16); // Format: YYYY-MM-DDTHH:mm
+    
     tempDiv.innerHTML = `
-      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 9999; max-height: 80vh; overflow-y: auto; min-width: 400px;">
-        <h3 style="margin-bottom: 15px; font-size: 18px; font-weight: bold;">为买家预约提出时间段</h3>
-        <p style="margin-bottom: 10px; color: #666; font-size: 14px;">请至少提出 1 个时间段（可添加多个）</p>
-        <div id="slotsContainer" style="max-height: 300px; overflow-y: auto; margin-bottom: 15px;"></div>
-        <button id="addSlotBtn" style="width: 100%; padding: 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 15px;">+ 添加时间段</button>
+      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 9999; max-height: 80vh; overflow-y: auto; min-width: 500px;">
+        <h3 style="margin-bottom: 15px; font-size: 20px; font-weight: bold; color: #1f2937;">为买家预约提出时间段</h3>
+        <p style="margin-bottom: 15px; color: #6b7280; font-size: 14px; line-height: 1.5;">请至少提出 1 个时间段（可添加多个）<br/>提示：点击日期时间框右侧的小图标，可以选择日期和时间（小时、分钟）</p>
+        <div id="slotsContainer" style="max-height: 350px; overflow-y: auto; margin-bottom: 15px;"></div>
+        <button id="addSlotBtn" style="width: 100%; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: 600;">+ 添加时间段</button>
         <div style="display: flex; gap: 10px;">
-          <button id="submitBtn" style="flex: 1; padding: 10px; background: #2ab26a; color: white; border: none; border-radius: 4px; cursor: pointer;">提交</button>
-          <button id="cancelBtn" style="flex: 1; padding: 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">取消</button>
+          <button id="submitBtn" style="flex: 1; padding: 12px; background: #2ab26a; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">提交</button>
+          <button id="cancelBtn" style="flex: 1; padding: 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">取消</button>
         </div>
       </div>
       <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9998;"></div>
@@ -232,18 +262,18 @@ export default function AdminDashboard() {
       slotCount++;
       const slotDiv = document.createElement('div');
       slotDiv.className = 'slot-input';
-      slotDiv.style.cssText = 'margin-bottom: 10px; padding: 10px; background: #f9fafb; border-radius: 4px;';
+      slotDiv.style.cssText = 'margin-bottom: 12px; padding: 12px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;';
       slotDiv.innerHTML = `
-        <div style="display: flex; gap: 10px; align-items: center;">
+        <div style="display: flex; gap: 12px; align-items: center;">
           <div style="flex: 1;">
-            <label style="display: block; margin-bottom: 5px; font-size: 13px;">开始时间：</label>
-            <input type="datetime-local" class="startTime" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;" />
+            <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">开始时间</label>
+            <input type="datetime-local" class="startTime" min="${nowStr}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
           </div>
           <div style="flex: 1;">
-            <label style="display: block; margin-bottom: 5px; font-size: 13px;">结束时间：</label>
-            <input type="datetime-local" class="endTime" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;" />
+            <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">结束时间</label>
+            <input type="datetime-local" class="endTime" min="${nowStr}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
           </div>
-          ${slotCount > 1 ? '<button class="removeSlot" style="padding: 6px 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">×</button>' : ''}
+          ${slotCount > 1 ? '<button class="removeSlot" style="padding: 8px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold;">×</button>' : ''}
         </div>
       `;
       slotsContainer.appendChild(slotDiv);
@@ -279,19 +309,43 @@ export default function AdminDashboard() {
       const endTimeInputs = document.querySelectorAll('.endTime') as NodeListOf<HTMLInputElement>;
       
       const timeSlots = [];
+      let hasError = false;
+      
       for (let i = 0; i < startTimeInputs.length; i++) {
         const startTime = startTimeInputs[i].value;
         const endTime = endTimeInputs[i].value;
         
-        if (!startTime || !endTime) {
+        // 检查是否为空（使用 trim 去除空格）
+        if (!startTime || !startTime.trim() || !endTime || !endTime.trim()) {
           alert("请填写所有时间段");
-          return;
+          hasError = true;
+          break;
+        }
+        
+        // 验证时间格式
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+          alert("时间格式不正确，请点击日期时间框右侧的图标选择时间");
+          hasError = true;
+          break;
+        }
+        
+        if (start >= end) {
+          alert("开始时间必须早于结束时间");
+          hasError = true;
+          break;
         }
         
         timeSlots.push({
-          start_time: new Date(startTime).toISOString(),
-          end_time: new Date(endTime).toISOString()
+          start_time: start.toISOString(),
+          end_time: end.toISOString()
         });
+      }
+      
+      if (hasError || timeSlots.length === 0) {
+        return;
       }
 
       try {
@@ -300,7 +354,7 @@ export default function AdminDashboard() {
           timeSlots,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        alert(`已提出 ${timeSlots.length} 个时间段，等待买家选择！`);
+        alert(`✓ 已提出 ${timeSlots.length} 个时间段，等待买家选择！`);
         cleanup();
         fetchData();
       } catch (err: any) {
@@ -335,8 +389,18 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen p-8 relative overflow-hidden"
+         style={{
+           backgroundImage: `url('https://images.unsplash.com/photo-1517504868000-42037c71215e?q=80&w=2070&auto=format&fit=crop')`,
+           backgroundSize: 'cover',
+           backgroundPosition: 'center',
+           backgroundAttachment: 'fixed'
+         }}>
+      {/* Overlay for better readability */}
+      <div className="absolute inset-0 bg-gray-100/95 backdrop-blur-sm"></div>
+      
+      {/* Content */}
+      <div className="relative z-10 max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
             <h1 className="text-4xl font-extrabold text-gray-800">管理后台</h1>

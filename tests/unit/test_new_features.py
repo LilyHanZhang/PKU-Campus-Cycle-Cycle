@@ -216,7 +216,13 @@ def test_user_select_time_slot(client, user_token, admin_token):
                                   headers={"Authorization": f"Bearer {user_token}"})
     
     assert select_response.status_code == 200
-    assert select_response.json()["message"] == "时间段选择成功"
+    assert select_response.json()["message"] == "时间段选择成功，等待管理员确认"
+    
+    # 管理员确认时间段
+    confirm_response = client.put(f"/time_slots/confirm/{apt_id}", 
+                                  headers={"Authorization": f"Bearer {admin_token}"})
+    assert confirm_response.status_code == 200
+    assert confirm_response.json()["message"] == "时间段确认成功"
 
 def test_get_countdown(client, user_token, admin_token):
     """测试获取交易倒计时"""
@@ -248,6 +254,10 @@ def test_get_countdown(client, user_token, admin_token):
     
     client.put(f"/time_slots/select/{apt_id}?time_slot_id={time_slot_id}", 
                headers={"Authorization": f"Bearer {user_token}"})
+    
+    # 管理员确认时间段
+    client.put(f"/time_slots/confirm/{apt_id}", 
+               headers={"Authorization": f"Bearer {admin_token}"})
     
     countdown_response = client.get("/time_slots/my/countdown", 
                                     headers={"Authorization": f"Bearer {user_token}"})

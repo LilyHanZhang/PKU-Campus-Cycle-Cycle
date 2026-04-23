@@ -103,7 +103,7 @@ def select_time_slot(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """用户选择时间段"""
+    """用户选择时间段，等待管理员确认"""
     appointment = db.query(Appointment).filter(Appointment.id == apt_id).first()
     if not appointment:
         raise HTTPException(status_code=404, detail="预约不存在")
@@ -119,12 +119,109 @@ def select_time_slot(
     if time_slot.is_booked == "true":
         raise HTTPException(status_code=400, detail="时间段已被预订")
     
-    # 更新预约的时间段
+    # 更新预约的时间段，但状态保持 PENDING，等待管理员确认
     appointment.time_slot_id = time_slot_id
+    # 状态改为 PENDING，等待管理员确认
+    appointment.status = AppointmentStatus.PENDING.value
+    db.commit()
+    
+    # TODO: 发送私信通知管理员确认
+    from ..routers.messages import send_message_to_user
+    try:
+        # 获取所有管理员
+        from ..models import User, Role
+        admins = db.query(User).filter(User.role.in_([Role.ADMIN.value, Role.SUPER_ADMIN.value])).all()
+        for admin in admins:
+            send_message_to_user(
+                db=db,
+                sender_id=None,  # 系统消息
+                receiver_id=admin.id,
+                content=f"用户已选择时间段，请确认。预约 ID: {apt_id}"
+            )
+    except:
+        pass
+    
+    return {"message": "时间段选择成功，等待管理员确认"}
+
+@router.put("/confirm/{apt_id}", response_model=dict)
+def confirm_time_slot(
+    apt_id: UUID,
+    current_user: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """管理员确认用户选择的时间段"""
+    appointment = db.query(Appointment).filter(Appointment.id == apt_id).first()
+    if not appointment:
+        raise HTTPException(status_code=404, detail="预约不存在")
+    
+    if not appointment.time_slot_id:
+        raise HTTPException(status_code=400, detail="用户还未选择时间段")
+    
+    # 确认时间段，标记为已预订
+    time_slot = db.query(TimeSlot).filter(TimeSlot.id == appointment.time_slot_id).first()
+    if time_slot:
+        time_slot.is_booked = "true"
+    
+    # 更新预约状态为已确认
     appointment.status = AppointmentStatus.CONFIRMED.value
     db.commit()
     
-    return {"message": "时间段选择成功"}
+    # 发送私信通知用户
+    try:
+        from ..routers.messages import send_message_to_user
+        send_message_to_user(
+            db=db,
+            sender_id=None,  # 系统消息
+            receiver_id=appointment.user_id,
+            content=f"管理员已确认时间段，请按时进行交易。预约 ID: {apt_id}"
+        )
+    except:
+        pass
+    
+    return {"message": "时间段确认成功"}
+
+@router.put("/change/{apt_id}", response_model=dict)
+def change_time_slot(
+    apt_id: UUID,
+    new_time_slot_id: UUID,
+    current_user: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """管理员更改时间段并通知用户"""
+    appointment = db.query(Appointment).filter(Appointment.id == apt_id).first()
+    if not appointment:
+        raise HTTPException(status_code=404, detail="预约不存在")
+    
+    new_time_slot = db.query(TimeSlot).filter(TimeSlot.id == new_time_slot_id).first()
+    if not new_time_slot:
+        raise HTTPException(status_code=404, detail="新的时间段不存在")
+    
+    # 更新预约的时间段
+    appointment.time_slot_id = new_time_slot_id
+    # 状态改回 PENDING，等待用户确认
+    appointment.status = AppointmentStatus.PENDING.value
+    
+    # 标记旧时间段为未预订
+    if appointment.time_slot_id:
+        old_time_slot = db.query(TimeSlot).filter(TimeSlot.id == appointment.time_slot_id).first()
+        if old_time_slot and old_time_slot.id != new_time_slot_id:
+            old_time_slot.is_booked = "false"
+    
+    db.commit()
+    
+    # 发送私信通知用户
+    try:
+        from ..routers.messages import send_message_to_user
+        send_message_to_user(
+            db=db,
+            sender_id=None,  # 系统消息
+            receiver_id=appointment.user_id,
+            content=f"管理员已更改时间段，请重新确认。预约 ID: {apt_id}，新时间段：{new_time_slot.start_time} - {new_time_slot.end_time}"
+        )
+    except:
+        pass
+    
+    return {"message": "时间段更改成功，已通知用户重新确认"}
 
 @router.post("/reviews", response_model=ReviewResponse)
 def create_review(

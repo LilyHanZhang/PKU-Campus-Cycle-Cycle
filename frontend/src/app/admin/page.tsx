@@ -72,14 +72,27 @@ export default function AdminDashboard() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!authLoading && (!isAuthenticated || user?.role === "USER")) {
-      alert("您没有权限访问此页面");
-      window.location.href = "/";
+    console.log('Auth state:', { authLoading, isAuthenticated, user });
+    if (!authLoading) {
+      if (!user) {
+        console.log('No user, redirecting to login');
+        window.location.href = "/login";
+        return;
+      }
+      if (user.role === "USER") {
+        console.log('User role is USER, redirecting');
+        alert("您没有权限访问此页面");
+        window.location.href = "/";
+        return;
+      }
+      // 管理员权限，继续加载
+      console.log('Admin user detected:', user.role);
     }
   }, [authLoading, isAuthenticated, user]);
 
   useEffect(() => {
     if (user && (user.role === "ADMIN" || user.role === "SUPER_ADMIN")) {
+      console.log('Fetching data for admin user');
       fetchData();
     }
   }, [user]);
@@ -89,6 +102,7 @@ export default function AdminDashboard() {
     const headers = { Authorization: `Bearer ${token}` };
 
     try {
+      console.log('Fetching admin dashboard data...');
       const [pendingRes, usersRes, bikesRes, appointmentsRes, dashboardRes] = await Promise.all([
         axios.get(`${API_URL}/bicycles/?status=PENDING_APPROVAL`, { headers }),
         axios.get(`${API_URL}/users/`, { headers }),
@@ -96,14 +110,22 @@ export default function AdminDashboard() {
         axios.get(`${API_URL}/appointments/`, { headers }),
         axios.get(`${API_URL}/bicycles/admin/dashboard`, { headers }),
       ]);
+      console.log('Dashboard data loaded:', {
+        pending: pendingRes.data.length,
+        users: usersRes.data.length,
+        bikes: bikesRes.data.length,
+        appointments: appointmentsRes.data.length,
+        dashboard: dashboardRes.data
+      });
       setPendingBikes(pendingRes.data);
       setAllUsers(usersRes.data);
       setAllBikes(bikesRes.data);
       setAllAppointments(appointmentsRes.data);
       setDashboardData(dashboardRes.data);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to fetch data", err);
-      setError("获取数据失败");
+      console.error("Error response:", err.response?.data);
+      setError(`获取数据失败：${err.response?.data?.detail || err.message || "未知错误"}`);
     } finally {
       setLoading(false);
     }

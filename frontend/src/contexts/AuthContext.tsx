@@ -49,7 +49,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: data.role,
       });
     } catch (error) {
+      console.error('获取用户信息失败:', error);
       localStorage.removeItem("access_token");
+      setUser(null);  // 明确设置 user 为 null
     } finally {
       setLoading(false);
     }

@@ -493,7 +493,7 @@ def update_appointment(
     db.refresh(appointment)
     return appointment
 
-@appointment_router.put("/{apt_id}/confirm-pickup", response_model=AppointmentResponse)
+@appointment_router.put("/{apt_id}/confirm-pickup")
 def confirm_pickup(
     apt_id: UUID,
     current_user: dict = Depends(get_current_admin),
@@ -513,7 +513,8 @@ def confirm_pickup(
     
     return {
         "message": "买家取车确认成功，交易完成",
-        "appointment": appointment
+        "appointment_id": str(appointment.id),
+        "status": appointment.status
     }
 
 @appointment_router.put("/{apt_id}/cancel", response_model=AppointmentResponse)

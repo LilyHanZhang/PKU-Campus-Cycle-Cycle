@@ -20,4 +20,4 @@
 ## Website tests
 - Perform tests on the website https://pku-campus-cycle-cycle.vercel.app, testing the features of website after the success of deployment.
   - when testing the website, if an ordinary user does not exist, create it first and then test the features.
-- supmin: 2200017736@stu.pku.edu.cn password: pkucycle
+  - supmin: 2200017736@stu.pku.edu.cn password: pkucycle

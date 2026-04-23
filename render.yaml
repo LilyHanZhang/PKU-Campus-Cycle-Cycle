@@ -4,10 +4,12 @@ services:
     env: python
     region: oregon
     plan: free
-    buildCommand: "cd backend && pip install -r requirements.txt"
-    startCommand: "cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    buildCommand: "cd backend && pip install -r requirements.txt && echo 'Build completed successfully'"
+    startCommand: "cd backend && echo 'Starting server...' && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: DATABASE_URL
         value: postgresql://pku_cycle_db_qre8_user:xlZcWErBt7G5AVOq1ZjXLlv8v0K7v4wj@dpg-d7j3f3l7vvec73ahgetg-a.oregon-postgres.render.com/pku_cycle_db_qre8
       - key: PYTHON_VERSION
         value: 3.13.0
+      - key: LOG_LEVEL
+        value: debug

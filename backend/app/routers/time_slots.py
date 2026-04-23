@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from uuid import UUID
+from datetime import datetime
 
 from ..database import get_db
 from ..models import TimeSlot, Appointment, Bicycle, Review, AppointmentStatus
-from ..schemas import TimeSlotCreate, TimeSlotResponse, ReviewCreate, ReviewResponse
+from ..schemas import TimeSlotCreate, TimeSlotResponse, ReviewCreate, ReviewResponse, TimeSlotUpdate
 from ..auth import get_current_user, get_current_admin
 
 router = APIRouter(prefix="/time_slots", tags=["时间段管理"])
@@ -36,6 +37,41 @@ def create_time_slot(
     db.commit()
     db.refresh(db_time_slot)
     return db_time_slot
+
+@router.put("/{time_slot_id}", response_model=TimeSlotResponse)
+def update_time_slot(
+    time_slot_id: UUID,
+    time_slot_update: TimeSlotUpdate,
+    current_user: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """管理员更新时间段（可以更改时间）"""
+    time_slot = db.query(TimeSlot).filter(TimeSlot.id == time_slot_id).first()
+    if not time_slot:
+        raise HTTPException(status_code=404, detail="时间段不存在")
+    
+    update_data = time_slot_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(time_slot, key, value)
+    
+    db.commit()
+    db.refresh(time_slot)
+    return time_slot
+
+@router.delete("/{time_slot_id}")
+def delete_time_slot(
+    time_slot_id: UUID,
+    current_user: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """管理员删除时间段"""
+    time_slot = db.query(TimeSlot).filter(TimeSlot.id == time_slot_id).first()
+    if not time_slot:
+        raise HTTPException(status_code=404, detail="时间段不存在")
+    
+    db.delete(time_slot)
+    db.commit()
+    return {"message": "删除成功"}
 
 @router.get("/appointment/{apt_id}", response_model=List[TimeSlotResponse])
 def get_available_time_slots(
@@ -126,3 +162,48 @@ def create_review(
     db.refresh(db_review)
     
     return db_review
+
+@router.get("/my/countdown")
+def get_my_countdown(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """获取用户的交易倒计时"""
+    from sqlalchemy.orm import joinedload
+    
+    # 查询用户已确认但未完成的预约
+    appointments = db.query(Appointment).filter(
+        Appointment.user_id == UUID(current_user["user_id"]),
+        Appointment.status == AppointmentStatus.CONFIRMED.value,
+        Appointment.time_slot_id.isnot(None)
+    ).all()
+    
+    countdowns = []
+    now = datetime.now()
+    
+    for apt in appointments:
+        time_slot = db.query(TimeSlot).filter(TimeSlot.id == apt.time_slot_id).first()
+        if time_slot:
+            time_left = (time_slot.start_time - now).total_seconds()
+            countdowns.append({
+                "appointment_id": str(apt.id),
+                "bicycle_id": str(apt.bicycle_id),
+                "type": apt.type,
+                "start_time": time_slot.start_time.isoformat(),
+                "end_time": time_slot.end_time.isoformat(),
+                "time_left_seconds": time_left,
+                "status": "pending" if time_left > 0 else "overdue"
+            })
+    
+    # 查询有待确认的预约
+    pending_appointments = db.query(Appointment).filter(
+        Appointment.user_id == UUID(current_user["user_id"]),
+        Appointment.status == AppointmentStatus.PENDING.value
+    ).all()
+    
+    pending_count = len(pending_appointments)
+    
+    return {
+        "countdowns": countdowns,
+        "pending_count": pending_count
+    }

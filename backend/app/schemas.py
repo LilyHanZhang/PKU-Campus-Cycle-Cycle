@@ -79,6 +79,7 @@ class AppointmentResponse(AppointmentBase):
     id: UUID
     user_id: UUID
     status: str
+    time_slot_id: Optional[UUID] = None
     created_at: datetime
 
     class Config:
@@ -92,6 +93,10 @@ class TimeSlotBase(BaseModel):
 
 class TimeSlotCreate(TimeSlotBase):
     pass
+
+class TimeSlotUpdate(BaseModel):
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
 
 class TimeSlotResponse(TimeSlotBase):
     id: UUID

@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import { User, LogOut } from "lucide-react";
+import { User, LogOut, Clock, AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import axios from "axios";
@@ -18,6 +18,8 @@ export default function Home() {
     in_stock_bicycles: 0,
     total_users: 0
   });
+  const [countdowns, setCountdowns] = useState([]);
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     // 获取统计数据
@@ -29,6 +31,36 @@ export default function Home() {
         console.error("Failed to fetch stats", error);
       });
   }, []);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchCountdown();
+      const interval = setInterval(fetchCountdown, 1000); // 每秒更新
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated, user]);
+
+  const fetchCountdown = async () => {
+    if (!isAuthenticated) return;
+    const token = localStorage.getItem("access_token");
+    try {
+      const response = await axios.get(`${API_URL}/time_slots/my/countdown`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCountdowns(response.data.countdowns || []);
+      setPendingCount(response.data.pending_count || 0);
+    } catch (error) {
+      console.error("Failed to fetch countdown", error);
+    }
+  };
+
+  const formatTimeLeft = (seconds: number) => {
+    if (seconds <= 0) return "已过期";
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const handleLogout = () => {
     logout();
@@ -90,6 +122,53 @@ export default function Home() {
           )}
         </div>
       </header>
+
+      {/* 交易倒计时模块 */}
+      {isAuthenticated && (countdowns.length > 0 || pendingCount > 0) && (
+        <section className="w-full max-w-4xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-2xl p-6 shadow-xl mb-8">
+          <h2 className="text-2xl font-black mb-4 flex items-center">
+            <Clock className="mr-2" />
+            交易倒计时
+          </h2>
+          {countdowns.length > 0 ? (
+            <div className="space-y-3">
+              {countdowns.map((cd: any) => (
+                <div key={cd.appointment_id} className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-bold text-sm">
+                        {cd.type === 'drop-off' ? '🚲 交车预约' : '🔎 提车预约'}
+                      </p>
+                      <p className="text-xs text-blue-100">
+                        车辆 ID: {cd.bicycle_id.substring(0, 8)}...
+                      </p>
+                      <p className="text-xs text-blue-100">
+                        时间：{new Date(cd.start_time).toLocaleString('zh-CN')}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-3xl font-mono font-bold">
+                        {formatTimeLeft(cd.time_left_seconds)}
+                      </p>
+                      <p className={`text-xs ${cd.status === 'overdue' ? 'text-red-200' : 'text-green-200'}`}>
+                        {cd.status === 'overdue' ? '已过期' : '剩余时间'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : pendingCount > 0 ? (
+            <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 flex items-center">
+              <AlertCircle className="mr-3 text-yellow-300" size={24} />
+              <div>
+                <p className="font-bold">您有 {pendingCount} 笔待确认的交易</p>
+                <p className="text-sm text-blue-100">请等待管理员审核并提供可选时间段</p>
+              </div>
+            </div>
+          ) : null}
+        </section>
+      )}
 
       <main className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
         <div className="bg-white rounded-2xl shadow-xl p-8 hover:shadow-2xl transition hover:-translate-y-1 cursor-pointer border-t-4 border-[#2ab26a]">

@@ -99,29 +99,62 @@ export default function AdminDashboard() {
 
   const handleAddTimeSlot = async (bicycleId: string, appointmentType: string) => {
     const token = localStorage.getItem("access_token");
-    const startTimeInput = prompt("请输入开始时间（格式：2024-01-01T10:00）:");
-    if (!startTimeInput) return;
     
-    const endTimeInput = prompt("请输入结束时间（格式：2024-01-01T11:00）:");
-    if (!endTimeInput) return;
+    // 创建一个临时的 div 来显示时间选择器
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = `
+      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 9999;">
+        <h3 style="margin-bottom: 15px; font-size: 18px; font-weight: bold;">添加时间段</h3>
+        <label style="display: block; margin-bottom: 5px;">开始时间：</label>
+        <input type="datetime-local" id="startTime" style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;" />
+        <label style="display: block; margin-bottom: 5px;">结束时间：</label>
+        <input type="datetime-local" id="endTime" style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;" />
+        <div style="display: flex; gap: 10px;">
+          <button id="confirmBtn" style="flex: 1; padding: 10px; background: #2ab26a; color: white; border: none; border-radius: 4px; cursor: pointer;">确认</button>
+          <button id="cancelBtn" style="flex: 1; padding: 10px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer;">取消</button>
+        </div>
+      </div>
+      <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9998;"></div>
+    `;
+    document.body.appendChild(tempDiv);
 
-    try {
-      await axios.post(
-        `${API_URL}/time_slots/`,
-        {
-          bicycle_id: bicycleId,
-          appointment_type: appointmentType,
-          start_time: new Date(startTimeInput).toISOString(),
-          end_time: new Date(endTimeInput).toISOString(),
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert("时间段添加成功！");
-      fetchData();
-    } catch (err) {
-      console.error("Failed to add time slot", err);
-      alert("操作失败，请重试。");
-    }
+    const confirmBtn = document.getElementById('confirmBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    
+    const cleanup = () => {
+      document.body.removeChild(tempDiv);
+    };
+
+    cancelBtn?.addEventListener('click', cleanup);
+
+    confirmBtn?.addEventListener('click', async () => {
+      const startTimeInput = (document.getElementById('startTime') as HTMLInputElement).value;
+      const endTimeInput = (document.getElementById('endTime') as HTMLInputElement).value;
+      
+      if (!startTimeInput || !endTimeInput) {
+        alert("请选择开始和结束时间");
+        return;
+      }
+
+      try {
+        await axios.post(
+          `${API_URL}/time_slots/`,
+          {
+            bicycle_id: bicycleId,
+            appointment_type: appointmentType,
+            start_time: new Date(startTimeInput).toISOString(),
+            end_time: new Date(endTimeInput).toISOString(),
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        alert("时间段添加成功！");
+        cleanup();
+        fetchData();
+      } catch (err) {
+        console.error("Failed to add time slot", err);
+        alert("操作失败，请重试。");
+      }
+    });
   };
 
   const handleConfirmPickup = async (aptId: string) => {

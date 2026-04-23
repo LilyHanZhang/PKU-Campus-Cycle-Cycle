@@ -59,12 +59,23 @@ export default function AdminDashboard() {
     // 创建多个时间段输入框
     const tempDiv = document.createElement('div');
     const now = new Date();
-    const nowStr = now.toISOString().slice(0, 16); // Format: YYYY-MM-DDTHH:mm
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const minDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
     
     tempDiv.innerHTML = `
-      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 9999; max-height: 80vh; overflow-y: auto; min-width: 500px;">
+      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 9999; max-height: 80vh; overflow-y: auto; min-width: 550px;">
         <h3 style="margin-bottom: 15px; font-size: 20px; font-weight: bold; color: #1f2937;">为卖家提出时间段</h3>
-        <p style="margin-bottom: 15px; color: #6b7280; font-size: 14px; line-height: 1.5;">请至少提出 1 个时间段（可添加多个）<br/>提示：点击日期时间框右侧的小图标，可以选择日期和时间（小时、分钟）</p>
+        <p style="margin-bottom: 15px; color: #6b7280; font-size: 14px; line-height: 1.6;">
+          <strong>使用说明：</strong><br/>
+          1. 点击日期时间输入框，会弹出日期选择器<br/>
+          2. 选择日期后，在时间部分可以直接点击小时或分钟数字进行选择<br/>
+          3. 也可以直接在输入框中手动输入时间（格式：YYYY-MM-DD HH:MM）<br/>
+          4. 请至少提出 1 个时间段（可添加多个）
+        </p>
         <div id="slotsContainer" style="max-height: 350px; overflow-y: auto; margin-bottom: 15px;"></div>
         <button id="addSlotBtn" style="width: 100%; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: 600;">+ 添加时间段</button>
         <div style="display: flex; gap: 10px;">
@@ -88,11 +99,11 @@ export default function AdminDashboard() {
         <div style="display: flex; gap: 12px; align-items: center;">
           <div style="flex: 1;">
             <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">开始时间</label>
-            <input type="datetime-local" class="startTime" min="${nowStr}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+            <input type="datetime-local" class="startTime" min="${minDateTime}" step="60" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
           </div>
           <div style="flex: 1;">
             <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">结束时间</label>
-            <input type="datetime-local" class="endTime" min="${nowStr}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+            <input type="datetime-local" class="endTime" min="${minDateTime}" step="60" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
           </div>
           ${slotCount > 1 ? '<button class="removeSlot" style="padding: 8px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold;">×</button>' : ''}
         </div>
@@ -135,28 +146,37 @@ export default function AdminDashboard() {
       let hasError = false;
       
       for (let i = 0; i < startTimeInputs.length; i++) {
-        const startTime = startTimeInputs[i].value;
-        const endTime = endTimeInputs[i].value;
+        const startTime = startTimeInputs[i].value.trim();
+        const endTime = endTimeInputs[i].value.trim();
         
-        // 检查是否为空（使用 trim 去除空格）
-        if (!startTime || !startTime.trim() || !endTime || !endTime.trim()) {
+        console.log(`Slot ${i}: start="${startTime}", end="${endTime}"`);
+        
+        // 检查是否为空
+        if (!startTime || !endTime) {
           alert("请填写所有时间段");
           hasError = true;
           break;
         }
         
-        // 验证时间格式
+        // 验证时间格式 - datetime-local 返回 "YYYY-MM-DDTHH:mm" 格式
         const start = new Date(startTime);
         const end = new Date(endTime);
         
         if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-          alert("时间格式不正确，请点击日期时间框右侧的图标选择时间");
+          alert("时间格式不正确，请重新选择时间");
           hasError = true;
           break;
         }
         
         if (start >= end) {
           alert("开始时间必须早于结束时间");
+          hasError = true;
+          break;
+        }
+        
+        // 验证时间不是过去的时间
+        if (start < new Date()) {
+          alert("开始时间不能是过去的时间");
           hasError = true;
           break;
         }
@@ -168,6 +188,7 @@ export default function AdminDashboard() {
       }
       
       if (hasError || timeSlots.length === 0) {
+        console.log("Validation failed:", { hasError, timeSlots: timeSlots.length });
         return;
       }
 
@@ -238,12 +259,23 @@ export default function AdminDashboard() {
     // 创建多个时间段输入框
     const tempDiv = document.createElement('div');
     const now = new Date();
-    const nowStr = now.toISOString().slice(0, 16); // Format: YYYY-MM-DDTHH:mm
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const minDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
     
     tempDiv.innerHTML = `
-      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 9999; max-height: 80vh; overflow-y: auto; min-width: 500px;">
+      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 9999; max-height: 80vh; overflow-y: auto; min-width: 550px;">
         <h3 style="margin-bottom: 15px; font-size: 20px; font-weight: bold; color: #1f2937;">为买家预约提出时间段</h3>
-        <p style="margin-bottom: 15px; color: #6b7280; font-size: 14px; line-height: 1.5;">请至少提出 1 个时间段（可添加多个）<br/>提示：点击日期时间框右侧的小图标，可以选择日期和时间（小时、分钟）</p>
+        <p style="margin-bottom: 15px; color: #6b7280; font-size: 14px; line-height: 1.6;">
+          <strong>使用说明：</strong><br/>
+          1. 点击日期时间输入框，会弹出日期选择器<br/>
+          2. 选择日期后，在时间部分可以直接点击小时或分钟数字进行选择<br/>
+          3. 也可以直接在输入框中手动输入时间（格式：YYYY-MM-DD HH:MM）<br/>
+          4. 请至少提出 1 个时间段（可添加多个）
+        </p>
         <div id="slotsContainer" style="max-height: 350px; overflow-y: auto; margin-bottom: 15px;"></div>
         <button id="addSlotBtn" style="width: 100%; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: 600;">+ 添加时间段</button>
         <div style="display: flex; gap: 10px;">
@@ -267,11 +299,11 @@ export default function AdminDashboard() {
         <div style="display: flex; gap: 12px; align-items: center;">
           <div style="flex: 1;">
             <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">开始时间</label>
-            <input type="datetime-local" class="startTime" min="${nowStr}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+            <input type="datetime-local" class="startTime" min="${minDateTime}" step="60" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
           </div>
           <div style="flex: 1;">
             <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">结束时间</label>
-            <input type="datetime-local" class="endTime" min="${nowStr}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+            <input type="datetime-local" class="endTime" min="${minDateTime}" step="60" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
           </div>
           ${slotCount > 1 ? '<button class="removeSlot" style="padding: 8px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold;">×</button>' : ''}
         </div>
@@ -312,28 +344,37 @@ export default function AdminDashboard() {
       let hasError = false;
       
       for (let i = 0; i < startTimeInputs.length; i++) {
-        const startTime = startTimeInputs[i].value;
-        const endTime = endTimeInputs[i].value;
+        const startTime = startTimeInputs[i].value.trim();
+        const endTime = endTimeInputs[i].value.trim();
         
-        // 检查是否为空（使用 trim 去除空格）
-        if (!startTime || !startTime.trim() || !endTime || !endTime.trim()) {
+        console.log(`Slot ${i}: start="${startTime}", end="${endTime}"`);
+        
+        // 检查是否为空
+        if (!startTime || !endTime) {
           alert("请填写所有时间段");
           hasError = true;
           break;
         }
         
-        // 验证时间格式
+        // 验证时间格式 - datetime-local 返回 "YYYY-MM-DDTHH:mm" 格式
         const start = new Date(startTime);
         const end = new Date(endTime);
         
         if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-          alert("时间格式不正确，请点击日期时间框右侧的图标选择时间");
+          alert("时间格式不正确，请重新选择时间");
           hasError = true;
           break;
         }
         
         if (start >= end) {
           alert("开始时间必须早于结束时间");
+          hasError = true;
+          break;
+        }
+        
+        // 验证时间不是过去的时间
+        if (start < new Date()) {
+          alert("开始时间不能是过去的时间");
           hasError = true;
           break;
         }
@@ -345,6 +386,7 @@ export default function AdminDashboard() {
       }
       
       if (hasError || timeSlots.length === 0) {
+        console.log("Validation failed:", { hasError, timeSlots: timeSlots.length });
         return;
       }
 

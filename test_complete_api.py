@@ -256,7 +256,7 @@ class APITester:
             time_slot_id = response.json()[0]["id"]
             
             response = requests.put(
-                f"{BASE_URL}/time_slots/select-appointment/{self.appointment_id}",
+                f"{BASE_URL}/time_slots/select/{self.appointment_id}",
                 json={"time_slot_id": time_slot_id},
                 headers={"Authorization": f"Bearer {self.user_token}"}
             )
@@ -281,17 +281,24 @@ class APITester:
             print(f"✓ Admin confirmed time slot")
             print(f"   Message: {response.json()['message']}")
             
-            # Check appointment status
+            # Check appointment status from the list
             response = requests.get(
-                f"{BASE_URL}/appointments/{self.appointment_id}",
+                f"{BASE_URL}/appointments/",
                 headers={"Authorization": f"Bearer {self.admin_token}"}
             )
-            print(f"   Appointment status: {response.json()['status']}")
-            
-            if response.json()["status"] == "CONFIRMED":
-                print(f"✓ Status correctly changed to CONFIRMED")
+            if response.status_code == 200:
+                appointments = response.json()
+                apt = next((a for a in appointments if a['id'] == str(self.appointment_id)), None)
+                if apt:
+                    print(f"   Appointment status: {apt['status']}")
+                    if apt["status"] == "CONFIRMED":
+                        print(f"✓ Status correctly changed to CONFIRMED")
+                    else:
+                        print(f"✗ Status should be CONFIRMED but is {apt['status']}")
+                else:
+                    print(f"✗ Appointment not found in list")
             else:
-                print(f"✗ Status should be CONFIRMED but is {response.json()['status']}")
+                print(f"✗ Failed to get appointments: {response.text}")
         else:
             print(f"✗ Failed: {response.text}")
             return False

@@ -131,8 +131,8 @@ def propose_time_slots(
     if not bike:
         raise HTTPException(status_code=404, detail="自行车不存在")
     
-    # 自行车状态应该是 IN_STOCK（已审核通过）且有预约
-    if bike.status != BicycleStatus.IN_STOCK.value:
+    # 自行车状态应该是 IN_STOCK（已审核通过）或 LOCKED（有预约）且有预约
+    if bike.status not in [BicycleStatus.IN_STOCK.value, BicycleStatus.LOCKED.value]:
         raise HTTPException(status_code=400, detail="自行车状态不正确，需要先审核通过")
     
     # 检查是否有相关的预约

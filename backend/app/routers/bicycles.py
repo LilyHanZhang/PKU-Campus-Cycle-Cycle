@@ -157,8 +157,8 @@ def propose_time_slots(
         # 审核通过
         bike.status = BicycleStatus.IN_STOCK.value
     elif bike.status == BicycleStatus.IN_STOCK.value:
-        # 买家登记场景，不需要预约，直接创建 drop-off 类型时间段
-        appointment_type = "drop-off"
+        # 买家登记场景，不需要预约，直接创建 pick-up 类型时间段（买家来取车）
+        appointment_type = "pick-up"
         # 创建预约（PENDING 状态，等待用户选择时间段）
         appointment = Appointment(
             user_id=bike.owner_id,

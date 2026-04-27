@@ -229,9 +229,12 @@ def select_bicycle_time_slot(
     if time_slot.is_booked == "true":
         raise HTTPException(status_code=400, detail="时间段已被预订")
     
-    # 更新自行车的时间段
-    bicycle.time_slot_id = selection.time_slot_id
-    # 状态保持 LOCKED，等待管理员确认
+    # 标记时间段为已预订
+    time_slot = db.query(TimeSlot).filter(TimeSlot.id == selection.time_slot_id).first()
+    if time_slot:
+        time_slot.is_booked = "true"
+    
+    # 更新自行车状态为 LOCKED（已选择时间段，等待管理员确认）
     bicycle.status = BicycleStatus.LOCKED.value
     db.commit()
     
@@ -317,13 +320,14 @@ def confirm_bicycle_time_slot(
     if not bicycle:
         raise HTTPException(status_code=404, detail="自行车不存在")
     
-    if not bicycle.time_slot_id:
-        raise HTTPException(status_code=400, detail="用户还未选择时间段")
+    # 查询该自行车的已预订时间段（用户已选择）
+    time_slot = db.query(TimeSlot).filter(
+        TimeSlot.bicycle_id == bike_id,
+        TimeSlot.is_booked == "true"
+    ).first()
     
-    # 标记时间段为已预订
-    time_slot = db.query(TimeSlot).filter(TimeSlot.id == bicycle.time_slot_id).first()
-    if time_slot:
-        time_slot.is_booked = "true"
+    if not time_slot:
+        raise HTTPException(status_code=400, detail="用户还未选择时间段")
     
     # 创建预约记录（卖家流程）
     appointment = Appointment(
@@ -331,7 +335,7 @@ def confirm_bicycle_time_slot(
         bicycle_id=bike_id,
         type="drop-off",  # 卖家流程
         status=AppointmentStatus.CONFIRMED.value,
-        time_slot_id=bicycle.time_slot_id
+        time_slot_id=time_slot.id
     )
     db.add(appointment)
     

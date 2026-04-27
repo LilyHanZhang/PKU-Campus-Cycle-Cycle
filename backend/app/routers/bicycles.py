@@ -149,12 +149,16 @@ def propose_time_slots(
     
     # 根据自行车状态和预约类型确定 appointment_type
     # PENDING_APPROVAL: 卖家流程，管理员直接提出时间段，创建 pick-up 类型（卖家送车，管理员取车）
+    # IN_STOCK: 买家流程，管理员直接提出时间段，创建 drop-off 类型（买家来取车）
     # 有预约的情况：根据预约类型反向设置
     if bike.status == BicycleStatus.PENDING_APPROVAL.value:
         # 卖家登记场景，不需要预约，直接创建 pick-up 类型时间段
         appointment_type = "pick-up"
         # 审核通过
         bike.status = BicycleStatus.IN_STOCK.value
+    elif bike.status == BicycleStatus.IN_STOCK.value:
+        # 买家登记场景，不需要预约，直接创建 drop-off 类型时间段
+        appointment_type = "drop-off"
     elif appointment:
         # 有预约的场景，根据预约类型反向设置
         # drop-off = 卖家流程（卖家把车送来，管理员取车） -> 创建 pick-up 时间段

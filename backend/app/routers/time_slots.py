@@ -275,10 +275,15 @@ def confirm_time_slot(
     # 更新预约状态为已确认
     appointment.status = AppointmentStatus.CONFIRMED.value
     
-    # 如果是买家预约（type 为 drop-off），将自行车状态改为 SOLD
-    if appointment.type == "drop-off":
-        bicycle = db.query(Bicycle).filter(Bicycle.id == appointment.bicycle_id).first()
-        if bicycle and bicycle.status == BicycleStatus.IN_STOCK.value:
+    # 更新自行车状态
+    bicycle = db.query(Bicycle).filter(Bicycle.id == appointment.bicycle_id).first()
+    if bicycle:
+        # 如果是卖家流程（type 为 drop-off），将自行车状态改为 RESERVED（等待线下交易）
+        # 线下交易完成后，管理员再将自行车存入库存（IN_STOCK）或标记为已售（SOLD）
+        if appointment.type == "drop-off":
+            bicycle.status = BicycleStatus.RESERVED.value
+        # 如果是买家流程（type 为 pick-up），将自行车状态改为 SOLD
+        elif appointment.type == "pick-up":
             bicycle.status = BicycleStatus.SOLD.value
     
     db.commit()

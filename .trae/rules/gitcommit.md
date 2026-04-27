@@ -1,1 +1,1 @@
-在推送到github时，不要把.trae目录提交到github，里面有敏感信息。
+在推送到github时，不要把`website_info.md`目录提交到github，里面有敏感信息。

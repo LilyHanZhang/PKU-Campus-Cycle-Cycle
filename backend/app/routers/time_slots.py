@@ -235,6 +235,14 @@ def select_bicycle_time_slot(
     if time_slot:
         time_slot.is_booked = "true"
     
+    # 更新预约的 time_slot_id（如果有预约）
+    appointment = db.query(Appointment).filter(
+        Appointment.bicycle_id == bike_id,
+        Appointment.status == "PENDING"
+    ).first()
+    if appointment:
+        appointment.time_slot_id = selection.time_slot_id
+    
     # 更新自行车状态为 LOCKED（已选择时间段，等待管理员确认）
     bicycle.status = BicycleStatus.LOCKED.value
     db.commit()

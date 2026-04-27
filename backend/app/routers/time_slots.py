@@ -304,6 +304,57 @@ def confirm_time_slot(
     
     return {"message": "时间段确认成功"}
 
+@router.put("/confirm-bicycle/{bike_id}", response_model=dict)
+def confirm_bicycle_time_slot(
+    bike_id: UUID,
+    current_user: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """管理员确认用户选择的自行车时间段（卖家流程）"""
+    from ..models import Appointment, AppointmentStatus
+    
+    bicycle = db.query(Bicycle).filter(Bicycle.id == bike_id).first()
+    if not bicycle:
+        raise HTTPException(status_code=404, detail="自行车不存在")
+    
+    if not bicycle.time_slot_id:
+        raise HTTPException(status_code=400, detail="用户还未选择时间段")
+    
+    # 标记时间段为已预订
+    time_slot = db.query(TimeSlot).filter(TimeSlot.id == bicycle.time_slot_id).first()
+    if time_slot:
+        time_slot.is_booked = "true"
+    
+    # 创建预约记录（卖家流程）
+    appointment = Appointment(
+        user_id=bicycle.owner_id,
+        bicycle_id=bike_id,
+        type="drop-off",  # 卖家流程
+        status=AppointmentStatus.CONFIRMED.value,
+        time_slot_id=bicycle.time_slot_id
+    )
+    db.add(appointment)
+    
+    # 更新自行车状态为 RESERVED（等待线下交易）
+    bicycle.status = BicycleStatus.RESERVED.value
+    db.commit()
+    
+    # 发送私信通知用户
+    try:
+        from ..routers.messages import send_message_to_user
+        from uuid import UUID
+        admin_id = UUID(current_user["user_id"]) if isinstance(current_user["user_id"], str) else current_user["user_id"]
+        send_message_to_user(
+            db=db,
+            sender_id=admin_id,
+            receiver_id=bicycle.owner_id,
+            content=f"管理员已确认时间段，请按时将自行车送到指定地点。自行车 ID: {bike_id}"
+        )
+    except:
+        pass
+    
+    return {"message": "时间段确认成功"}
+
 @router.put("/change/{apt_id}", response_model=dict)
 def change_time_slot(
     apt_id: UUID,

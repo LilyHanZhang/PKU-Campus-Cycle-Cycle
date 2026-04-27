@@ -132,32 +132,36 @@ def propose_time_slots(
         raise HTTPException(status_code=404, detail="自行车不存在")
     
     # 自行车状态可以是：
-    # 1. PENDING_APPROVAL - 卖家登记后，管理员先审核通过再提出时间段
+    # 1. PENDING_APPROVAL - 卖家登记后，管理员直接提出时间段（无需预约）
     # 2. IN_STOCK - 已审核通过的自行车
     # 3. LOCKED - 有预约的自行车
     if bike.status not in [BicycleStatus.PENDING_APPROVAL.value, BicycleStatus.IN_STOCK.value, BicycleStatus.LOCKED.value]:
         raise HTTPException(status_code=400, detail="自行车状态不正确")
     
-    # 如果是 PENDING_APPROVAL 状态，先审核通过
-    if bike.status == BicycleStatus.PENDING_APPROVAL.value:
-        bike.status = BicycleStatus.IN_STOCK.value
-    
-    # 检查是否有相关的预约
     from ..models import Appointment, TimeSlot
     from datetime import datetime
     
+    # 检查是否有相关的预约
     appointment = db.query(Appointment).filter(
         Appointment.bicycle_id == bike_id,
         Appointment.status == "PENDING"
     ).first()
     
-    if not appointment:
+    # 根据自行车状态和预约类型确定 appointment_type
+    # PENDING_APPROVAL: 卖家流程，管理员直接提出时间段，创建 pick-up 类型（卖家送车，管理员取车）
+    # 有预约的情况：根据预约类型反向设置
+    if bike.status == BicycleStatus.PENDING_APPROVAL.value:
+        # 卖家登记场景，不需要预约，直接创建 pick-up 类型时间段
+        appointment_type = "pick-up"
+        # 审核通过
+        bike.status = BicycleStatus.IN_STOCK.value
+    elif appointment:
+        # 有预约的场景，根据预约类型反向设置
+        # drop-off = 卖家流程（卖家把车送来，管理员取车） -> 创建 pick-up 时间段
+        # pick-up = 买家流程（买家来取车） -> 创建 drop-off 时间段
+        appointment_type = "pick-up" if appointment.type == "drop-off" else "drop-off"
+    else:
         raise HTTPException(status_code=400, detail="该自行车没有待处理的预约")
-    
-    # 根据预约类型设置 appointment_type
-    # drop-off = 卖家流程（卖家把车送来，管理员取车）
-    # pick-up = 买家流程（买家来取车）
-    appointment_type = "pick-up" if appointment.type == "drop-off" else "drop-off"
     
     # 创建时间段
     created_slots = []

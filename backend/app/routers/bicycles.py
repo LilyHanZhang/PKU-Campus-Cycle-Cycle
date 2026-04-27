@@ -131,9 +131,16 @@ def propose_time_slots(
     if not bike:
         raise HTTPException(status_code=404, detail="自行车不存在")
     
-    # 自行车状态应该是 IN_STOCK（已审核通过）或 LOCKED（有预约）且有预约
-    if bike.status not in [BicycleStatus.IN_STOCK.value, BicycleStatus.LOCKED.value]:
-        raise HTTPException(status_code=400, detail="自行车状态不正确，需要先审核通过")
+    # 自行车状态可以是：
+    # 1. PENDING_APPROVAL - 卖家登记后，管理员先审核通过再提出时间段
+    # 2. IN_STOCK - 已审核通过的自行车
+    # 3. LOCKED - 有预约的自行车
+    if bike.status not in [BicycleStatus.PENDING_APPROVAL.value, BicycleStatus.IN_STOCK.value, BicycleStatus.LOCKED.value]:
+        raise HTTPException(status_code=400, detail="自行车状态不正确")
+    
+    # 如果是 PENDING_APPROVAL 状态，先审核通过
+    if bike.status == BicycleStatus.PENDING_APPROVAL.value:
+        bike.status = BicycleStatus.IN_STOCK.value
     
     # 检查是否有相关的预约
     from ..models import Appointment, TimeSlot

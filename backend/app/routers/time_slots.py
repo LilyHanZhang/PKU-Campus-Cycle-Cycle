@@ -85,7 +85,7 @@ def get_bicycle_time_slots(
     db: Session = Depends(get_db)
 ):
     """获取自行车的可选时间段（卖家和买家场景）"""
-    from ..models import Bicycle, Appointment
+    from ..models import Bicycle, Appointment, TimeSlot
     
     bicycle = db.query(Bicycle).filter(Bicycle.id == bike_id).first()
     if not bicycle:
@@ -101,6 +101,7 @@ def get_bicycle_time_slots(
     )
     
     # 检查用户是否有该自行车的待处理预约
+    user_appointment = None
     if not has_permission:
         user_appointment = db.query(Appointment).filter(
             Appointment.bicycle_id == bike_id,
@@ -113,10 +114,38 @@ def get_bicycle_time_slots(
     if not has_permission:
         raise HTTPException(status_code=403, detail="无权限查看")
     
-    time_slots = db.query(TimeSlot).filter(
+    # 查询时间段
+    query = db.query(TimeSlot).filter(
         TimeSlot.bicycle_id == bike_id,
         TimeSlot.is_booked == "false"
-    ).all()
+    )
+    
+    # 根据用户身份和预约类型过滤时间段
+    # pick-up 类型时间段：卖家流程（卖家送车），只有卖家可以查看
+    # drop-off 类型时间段：买家流程（买家取车），只有买家可以查看
+    if user_appointment:
+        # 有预约的用户，只能查看与预约类型匹配的时间段
+        if user_appointment.type == "pick-up":
+            # 买家预约，只能查看 drop-off 类型（买家取车）
+            query = query.filter(TimeSlot.appointment_type == "drop-off")
+        elif user_appointment.type == "drop-off":
+            # 卖家预约，只能查看 pick-up 类型（卖家送车）
+            query = query.filter(TimeSlot.appointment_type == "pick-up")
+    elif bicycle.owner_id == current_user_id:
+        # 自行车所有者，查看与自行车流程匹配的时间段
+        # 通过查询该自行车的预约类型来判断
+        bike_appointment = db.query(Appointment).filter(
+            Appointment.bicycle_id == bike_id,
+            Appointment.status.in_(["PENDING", "CONFIRMED"])
+        ).first()
+        if bike_appointment:
+            if bike_appointment.type == "pick-up":
+                # 买家流程，卖家不能查看（这是买家的时间段）
+                query = query.filter(TimeSlot.id == None)  # 返回空结果
+            # drop-off 类型：卖家流程，卖家可以查看
+        # 没有预约，返回所有时间段
+    
+    time_slots = query.all()
     
     return time_slots
 
@@ -198,7 +227,7 @@ def select_bicycle_time_slot(
     db: Session = Depends(get_db)
 ):
     """用户选择时间段，等待管理员确认（卖家和买家场景）"""
-    from ..models import Appointment
+    from ..models import Appointment, TimeSlot
     from uuid import UUID
     
     bicycle = db.query(Bicycle).filter(Bicycle.id == bike_id).first()
@@ -211,6 +240,7 @@ def select_bicycle_time_slot(
     has_permission = (bicycle.owner_id == current_user_id)
     
     # 检查用户是否有该自行车的待处理预约
+    user_appointment = None
     if not has_permission:
         user_appointment = db.query(Appointment).filter(
             Appointment.bicycle_id == bike_id,
@@ -229,6 +259,25 @@ def select_bicycle_time_slot(
     
     if time_slot.is_booked == "true":
         raise HTTPException(status_code=400, detail="时间段已被预订")
+    
+    # 验证时间段类型与用户身份匹配
+    # pick-up 类型：卖家流程（卖家送车）
+    # drop-off 类型：买家流程（买家取车）
+    if user_appointment:
+        # 有预约的用户，只能选择与预约类型匹配的时间段
+        if user_appointment.type == "pick-up" and time_slot.appointment_type != "drop-off":
+            raise HTTPException(status_code=403, detail="不能选择该类型的时间段")
+        elif user_appointment.type == "drop-off" and time_slot.appointment_type != "pick-up":
+            raise HTTPException(status_code=403, detail="不能选择该类型的时间段")
+    elif bicycle.owner_id == current_user_id:
+        # 自行车所有者，检查时间段类型
+        bike_appointment = db.query(Appointment).filter(
+            Appointment.bicycle_id == bike_id,
+            Appointment.status.in_(["PENDING", "CONFIRMED"])
+        ).first()
+        if bike_appointment and bike_appointment.type == "pick-up":
+            # 买家流程，卖家不能选择时间段
+            raise HTTPException(status_code=403, detail="该自行车为买家流程，卖家不能选择时间段")
     
     # 标记时间段为已预订
     time_slot = db.query(TimeSlot).filter(TimeSlot.id == selection.time_slot_id).first()

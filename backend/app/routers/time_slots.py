@@ -121,8 +121,8 @@ def get_bicycle_time_slots(
     )
     
     # 根据用户身份和预约类型过滤时间段
-    # pick-up 类型时间段：卖家流程（卖家送车），只有卖家可以查看
-    # drop-off 类型时间段：买家流程（买家取车），只有买家可以查看
+    # pick-up 类型时间段：卖家流程（卖家送车）
+    # drop-off 类型时间段：买家流程（买家取车）
     if user_appointment:
         # 有预约的用户，只能查看与预约类型匹配的时间段
         if user_appointment.type == "pick-up":
@@ -140,9 +140,11 @@ def get_bicycle_time_slots(
         ).first()
         if bike_appointment:
             if bike_appointment.type == "pick-up":
-                # 买家流程，卖家不能查看（这是买家的时间段）
-                query = query.filter(TimeSlot.id == None)  # 返回空结果
-            # drop-off 类型：卖家流程，卖家可以查看
+                # 买家流程：自行车所有者（买家）可以查看 drop-off 类型时间段
+                query = query.filter(TimeSlot.appointment_type == "drop-off")
+            elif bike_appointment.type == "drop-off":
+                # 卖家流程：自行车所有者（卖家）可以查看 pick-up 类型时间段
+                query = query.filter(TimeSlot.appointment_type == "pick-up")
         # 没有预约，返回所有时间段
     
     time_slots = query.all()

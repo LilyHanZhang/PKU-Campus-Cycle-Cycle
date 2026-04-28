@@ -277,9 +277,16 @@ def select_bicycle_time_slot(
             Appointment.bicycle_id == bike_id,
             Appointment.status.in_(["PENDING", "CONFIRMED"])
         ).first()
-        if bike_appointment and bike_appointment.type == "pick-up":
-            # 买家流程，卖家不能选择时间段
-            raise HTTPException(status_code=403, detail="该自行车为买家流程，卖家不能选择时间段")
+        if bike_appointment:
+            # 检查预约是否是当前用户的（买家流程）
+            if bike_appointment.user_id == current_user_id:
+                # 买家流程：买家（所有者）可以查看/选择 drop-off 类型时间段
+                if time_slot.appointment_type != "drop-off":
+                    raise HTTPException(status_code=403, detail="不能选择该类型的时间段")
+            else:
+                # 卖家流程：卖家（所有者）可以查看/选择 pick-up 类型时间段
+                if time_slot.appointment_type != "pick-up":
+                    raise HTTPException(status_code=403, detail="不能选择该类型的时间段")
     
     # 标记时间段为已预订
     time_slot = db.query(TimeSlot).filter(TimeSlot.id == selection.time_slot_id).first()

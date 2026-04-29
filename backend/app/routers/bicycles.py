@@ -752,7 +752,7 @@ def get_admin_dashboard(
             {
                 "id": str(apt.id),
                 "user_id": str(apt.user_id),
-                "username": getattr(getattr(apt, 'user', None), 'username', None) or "未知",
+                "username": getattr(getattr(apt, 'user', None), 'name', None) or "未知",
                 "bicycle_id": str(apt.bicycle_id),
                 "bicycle_brand": getattr(getattr(apt, 'bicycle', None), 'brand', None) or "未知",
                 "type": apt.type,
@@ -766,7 +766,7 @@ def get_admin_dashboard(
                 "id": str(bike.id),
                 "brand": bike.brand,
                 "owner_id": str(bike.owner_id),
-                "owner_username": getattr(getattr(bike, 'owner', None), 'username', None) or "未知",
+                "owner_username": getattr(getattr(bike, 'owner', None), 'name', None) or "未知",
                 "status": bike.status,
                 "time_slot_id": str(getattr(db.query(TimeSlot).filter(TimeSlot.bicycle_id == bike.id, TimeSlot.is_booked == "true").first(), 'id', None)) if db.query(TimeSlot).filter(TimeSlot.bicycle_id == bike.id, TimeSlot.is_booked == "true").first() else None,
                 "created_at": bike.created_at.isoformat() if bike.created_at else None

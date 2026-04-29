@@ -13,11 +13,21 @@ class Role(str, enum.Enum):
     SUPER_ADMIN = "SUPER_ADMIN"
 
 class BicycleStatus(str, enum.Enum):
-    PENDING_APPROVAL = "PENDING_APPROVAL"
-    IN_STOCK = "IN_STOCK"
-    LOCKED = "LOCKED"
-    RESERVED = "RESERVED"  # 已预约，等待线下交易
-    SOLD = "SOLD"
+    # 待审核状态
+    PENDING_APPROVAL = "PENDING_APPROVAL"  # 待管理员审核
+    
+    # 库存状态
+    IN_STOCK = "IN_STOCK"  # 在库存中，可被预约
+    
+    # 卖家流程状态（卖家卖车）
+    PENDING_SELLER_SLOT_SELECTION = "PENDING_SELLER_SLOT_SELECTION"  # 管理员已提出时间段，等待卖家选择
+    PENDING_ADMIN_CONFIRMATION_SELLER = "PENDING_ADMIN_CONFIRMATION_SELLER"  # 卖家已选择时间段，等待管理员确认
+    RESERVED = "RESERVED"  # 管理员已确认，等待线下交车（卖家送车到指定地点）
+    
+    # 买家流程状态（买家买车）
+    PENDING_BUYER_SLOT_SELECTION = "PENDING_BUYER_SLOT_SELECTION"  # 管理员已提出时间段，等待买家选择
+    PENDING_ADMIN_CONFIRMATION_BUYER = "PENDING_ADMIN_CONFIRMATION_BUYER"  # 买家已选择时间段，等待管理员确认
+    SOLD = "SOLD"  # 交易完成
 
 class AppointmentType(str, enum.Enum):
     DROP_OFF = "drop-off"

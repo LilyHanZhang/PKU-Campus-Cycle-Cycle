@@ -134,8 +134,9 @@ def propose_time_slots(
     # 自行车状态可以是：
     # 1. PENDING_APPROVAL - 卖家登记后，管理员直接提出时间段（无需预约）
     # 2. IN_STOCK - 已审核通过的自行车
-    # 3. LOCKED - 有预约的自行车
-    if bike.status not in [BicycleStatus.PENDING_APPROVAL.value, BicycleStatus.IN_STOCK.value, BicycleStatus.LOCKED.value]:
+    # 3. PENDING_SELLER_SLOT_SELECTION - 等待卖家选择时间段（卖家流程）
+    # 4. PENDING_BUYER_SLOT_SELECTION - 等待买家选择时间段（买家流程）
+    if bike.status not in [BicycleStatus.PENDING_APPROVAL.value, BicycleStatus.IN_STOCK.value, BicycleStatus.PENDING_SELLER_SLOT_SELECTION.value, BicycleStatus.PENDING_BUYER_SLOT_SELECTION.value]:
         raise HTTPException(status_code=400, detail="自行车状态不正确")
     
     from ..models import Appointment, TimeSlot
@@ -184,8 +185,8 @@ def propose_time_slots(
             status="PENDING"
         )
         db.add(appointment)
-    elif bike.status == BicycleStatus.LOCKED.value and appointment:
-        # 已有预约且已选择时间段的场景
+    elif bike.status in [BicycleStatus.PENDING_SELLER_SLOT_SELECTION.value, BicycleStatus.PENDING_BUYER_SLOT_SELECTION.value] and appointment:
+        # 已有预约且已选择时间段的场景（重新提出时间段）
         # 根据预约类型反向设置时间段类型
         appointment_type = "pick-up" if appointment.type == "drop-off" else "drop-off"
     else:
@@ -208,8 +209,14 @@ def propose_time_slots(
             "end_time": slot_data["end_time"]
         })
     
-    # 更新自行车状态为待处理（等待卖家选择时间段）
-    bike.status = BicycleStatus.LOCKED.value
+    # 更新自行车状态为等待用户选择时间段
+    # 根据预约类型确定是卖家流程还是买家流程
+    if appointment and appointment.type == "drop-off":
+        # 卖家流程：等待卖家选择时间段
+        bike.status = BicycleStatus.PENDING_SELLER_SLOT_SELECTION.value
+    else:
+        # 买家流程：等待买家选择时间段
+        bike.status = BicycleStatus.PENDING_BUYER_SLOT_SELECTION.value
     
     # 发送私信通知卖家
     try:
@@ -404,7 +411,8 @@ def create_appointment(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="该自行车当前不可预约"
             )
-        bike.status = BicycleStatus.LOCKED.value
+        # 买家流程：预约后进入等待买家选择时间段状态
+        bike.status = BicycleStatus.PENDING_BUYER_SLOT_SELECTION.value
 
     db_appointment = Appointment(
         user_id=UUID(current_user["user_id"]),
@@ -540,7 +548,8 @@ def update_appointment(
                 bike.status = BicycleStatus.SOLD.value
         elif apt_update.status == AppointmentStatus.CANCELLED.value:
             bike = db.query(Bicycle).filter(Bicycle.id == appointment.bicycle_id).first()
-            if bike and bike.status == BicycleStatus.LOCKED.value:
+            # 取消预约后，恢复自行车到库存状态
+            if bike and bike.status in [BicycleStatus.PENDING_BUYER_SLOT_SELECTION.value, BicycleStatus.PENDING_SELLER_SLOT_SELECTION.value, BicycleStatus.PENDING_ADMIN_CONFIRMATION_SELLER.value, BicycleStatus.PENDING_ADMIN_CONFIRMATION_BUYER.value]:
                 bike.status = BicycleStatus.IN_STOCK.value
 
     if apt_update.appointment_time:
@@ -598,7 +607,8 @@ def cancel_appointment(
     appointment.status = AppointmentStatus.CANCELLED.value
     # 释放自行车
     bike = db.query(Bicycle).filter(Bicycle.id == appointment.bicycle_id).first()
-    if bike and bike.status == BicycleStatus.LOCKED.value:
+    # 取消预约后，恢复自行车到库存状态
+    if bike and bike.status in [BicycleStatus.PENDING_BUYER_SLOT_SELECTION.value, BicycleStatus.PENDING_SELLER_SLOT_SELECTION.value, BicycleStatus.PENDING_ADMIN_CONFIRMATION_SELLER.value, BicycleStatus.PENDING_ADMIN_CONFIRMATION_BUYER.value]:
         bike.status = BicycleStatus.IN_STOCK.value
     db.commit()
     db.refresh(appointment)
@@ -623,7 +633,8 @@ def admin_cancel_appointment(
     appointment.status = AppointmentStatus.CANCELLED.value
     # 释放自行车
     bike = db.query(Bicycle).filter(Bicycle.id == appointment.bicycle_id).first()
-    if bike and bike.status == BicycleStatus.LOCKED.value:
+    # 取消预约后，恢复自行车到库存状态
+    if bike and bike.status in [BicycleStatus.PENDING_BUYER_SLOT_SELECTION.value, BicycleStatus.PENDING_SELLER_SLOT_SELECTION.value, BicycleStatus.PENDING_ADMIN_CONFIRMATION_SELLER.value, BicycleStatus.PENDING_ADMIN_CONFIRMATION_BUYER.value]:
         bike.status = BicycleStatus.IN_STOCK.value
     db.commit()
     
@@ -658,7 +669,8 @@ def reject_appointment(
     appointment.status = AppointmentStatus.CANCELLED.value
     # 释放自行车
     bike = db.query(Bicycle).filter(Bicycle.id == appointment.bicycle_id).first()
-    if bike and bike.status == BicycleStatus.LOCKED.value:
+    # 取消预约后，恢复自行车到库存状态
+    if bike and bike.status in [BicycleStatus.PENDING_BUYER_SLOT_SELECTION.value, BicycleStatus.PENDING_SELLER_SLOT_SELECTION.value, BicycleStatus.PENDING_ADMIN_CONFIRMATION_SELLER.value, BicycleStatus.PENDING_ADMIN_CONFIRMATION_BUYER.value]:
         bike.status = BicycleStatus.IN_STOCK.value
     db.commit()
     db.refresh(appointment)
@@ -726,7 +738,7 @@ def get_admin_dashboard(
             })
     
     # 获取等待管理员确认的自行车（卖家已选择时间段）
-    # 查询 LOCKED 状态且有已预订时间段的自行车
+    # 查询 PENDING_ADMIN_CONFIRMATION_SELLER 状态且有已预订时间段的自行车
     # 并且时间段类型是 pick-up（卖家流程的时间段类型）
     locked_bike_ids = db.query(TimeSlot.bicycle_id).filter(
         TimeSlot.is_booked == "true",
@@ -735,7 +747,7 @@ def get_admin_dashboard(
     waiting_bicycles = db.query(Bicycle).options(
         joinedload(Bicycle.owner)
     ).filter(
-        Bicycle.status == BicycleStatus.LOCKED.value,
+        Bicycle.status == BicycleStatus.PENDING_ADMIN_CONFIRMATION_SELLER.value,
         Bicycle.id.in_(locked_bike_ids)
     ).all()
     

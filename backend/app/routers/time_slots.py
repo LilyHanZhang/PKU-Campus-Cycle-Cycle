@@ -308,8 +308,14 @@ def select_bicycle_time_slot(
         # - 卖家流程：时间段是管理员提出的，卖家选择后等待管理员确认入库
         # - 买家流程：时间段是买家自己选的，需要管理员确认提车
     
-    # 更新自行车状态为 LOCKED（已选择时间段，等待管理员确认）
-    bicycle.status = BicycleStatus.LOCKED.value
+    # 更新自行车状态为等待管理员确认
+    # 根据预约类型确定是卖家流程还是买家流程
+    if appointment and appointment.type == "drop-off":
+        # 卖家流程：等待管理员确认入库
+        bicycle.status = BicycleStatus.PENDING_ADMIN_CONFIRMATION_SELLER.value
+    else:
+        # 买家流程：等待管理员确认提车
+        bicycle.status = BicycleStatus.PENDING_ADMIN_CONFIRMATION_BUYER.value
     
     # 发送私信通知管理员确认
     from ..routers.messages import send_message_to_user

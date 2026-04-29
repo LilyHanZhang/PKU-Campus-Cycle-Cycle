@@ -38,7 +38,8 @@ export default function MyTimeSlotsPage() {
       // 获取我的预约
       const appointmentsResponse = await axios.get(`${API_URL}/appointments/user/${user.id}`, { headers });
       const myAppointments = appointmentsResponse.data.filter((apt: any) => 
-        apt.status === 'PENDING' || apt.status === 'CONFIRMED'
+        (apt.status === 'PENDING' || apt.status === 'CONFIRMED') &&
+        !apt.time_slot_id  // 只显示还未选择时间段的预约
       );
 
       // 获取每个自行车/预约的可选时间段

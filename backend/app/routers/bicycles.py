@@ -683,6 +683,7 @@ def get_admin_dashboard(
 ):
     """管理员仪表盘 - 显示待处理交易及倒计时"""
     from datetime import timedelta
+    from sqlalchemy.orm import joinedload
     
     # 获取待处理的自行车登记
     pending_bicycles = db.query(Bicycle).filter(
@@ -692,7 +693,10 @@ def get_admin_dashboard(
     # 获取待处理的预约（用户已选择时间段，等待管理员确认）
     # 只查询买家流程的预约（pick-up = 买家取车，需要管理员确认）
     # 卖家流程（drop-off）不需要出现在这里，因为卖家确认后直接完成
-    waiting_appointments = db.query(Appointment).filter(
+    waiting_appointments = db.query(Appointment).options(
+        joinedload(Appointment.user),
+        joinedload(Appointment.bicycle)
+    ).filter(
         Appointment.status == AppointmentStatus.PENDING.value,
         Appointment.time_slot_id != None,
         Appointment.type == "pick-up"  # 只查询买家流程
@@ -724,7 +728,9 @@ def get_admin_dashboard(
         TimeSlot.is_booked == "true",
         TimeSlot.appointment_type == "pick-up"  # 只查询卖家流程的时间段
     ).distinct()
-    waiting_bicycles = db.query(Bicycle).filter(
+    waiting_bicycles = db.query(Bicycle).options(
+        joinedload(Bicycle.owner)
+    ).filter(
         Bicycle.status == BicycleStatus.LOCKED.value,
         Bicycle.id.in_(locked_bike_ids)
     ).all()

@@ -223,7 +223,7 @@ class TestNewBicycleStatusSystem:
         admin_headers = {"Authorization": f"Bearer {admin_token}"}
         
         print("\n【步骤 1】获取管理员仪表盘数据")
-        dashboard_response = requests.get(f"{BASE_URL}/bicycles/dashboard", headers=admin_headers)
+        dashboard_response = requests.get(f"{BASE_URL}/bicycles/admin/dashboard", headers=admin_headers)
         assert dashboard_response.status_code == 200
         dashboard_data = dashboard_response.json()
         

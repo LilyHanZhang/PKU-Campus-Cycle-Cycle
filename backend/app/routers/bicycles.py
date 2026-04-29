@@ -236,25 +236,35 @@ def confirm_bicycle_transaction(
     db: Session = Depends(get_db)
 ):
     """管理员确认自行车交易完成（卖家流程）"""
+    from ..models import Appointment, AppointmentStatus
+    
     bike = db.query(Bicycle).filter(Bicycle.id == bike_id).first()
     if not bike:
         raise HTTPException(status_code=404, detail="自行车不存在")
     
-    # 查找该自行车的时间段（应该只有一个被选择的）
-    from ..models import TimeSlot
-    time_slot = db.query(TimeSlot).filter(
-        TimeSlot.bicycle_id == bike_id,
-        TimeSlot.is_booked == "false"
+    # 查询该自行车的待处理预约
+    appointment = db.query(Appointment).filter(
+        Appointment.bicycle_id == bike_id,
+        Appointment.status == AppointmentStatus.PENDING.value
     ).first()
     
-    if not time_slot:
+    if not appointment:
+        raise HTTPException(status_code=400, detail="该自行车没有待处理的预约")
+    
+    # 检查预约是否有时间段
+    if not appointment.time_slot_id:
         raise HTTPException(status_code=400, detail="卖家还未选择时间段")
     
-    # 确认时间段，标记为已预订
-    time_slot.is_booked = "true"
+    # 根据预约类型设置自行车状态
+    # drop-off = 卖家流程（卖家送车） -> RESERVED（等待线下交易）
+    # pick-up = 买家流程（买家取车） -> SOLD（交易完成）
+    if appointment.type == "drop-off":
+        bike.status = BicycleStatus.RESERVED.value
+    elif appointment.type == "pick-up":
+        bike.status = BicycleStatus.SOLD.value
     
-    # 更新自行车状态为已预约（等待线下交易）
-    bike.status = BicycleStatus.RESERVED.value
+    # 更新预约状态为已确认
+    appointment.status = AppointmentStatus.CONFIRMED.value
     db.commit()
     
     # 发送私信通知卖家
@@ -262,16 +272,22 @@ def confirm_bicycle_transaction(
         from ..routers.messages import send_message_to_user
         from uuid import UUID
         admin_id = UUID(current_user["user_id"]) if isinstance(current_user["user_id"], str) else current_user["user_id"]
+        
+        if appointment.type == "drop-off":
+            content = f"管理员已确认时间段，请按时将自行车送到指定地点。自行车 ID: {bike_id}"
+        else:
+            content = f"管理员已确认时间段，请按时来取车。自行车 ID: {bike_id}"
+        
         send_message_to_user(
             db=db,
             sender_id=admin_id,
-            receiver_id=bike.owner_id,
-            content=f"管理员已确认时间段，请按时进行交易。自行车 ID: {bike_id}"
+            receiver_id=appointment.user_id,
+            content=content
         )
     except:
         pass
     
-    return {"message": "自行车交易确认成功，等待线下交易"}
+    return {"message": "自行车交易确认成功"}
 
 @router.post("/{bike_id}/cancel", response_model=dict)
 def cancel_bicycle(

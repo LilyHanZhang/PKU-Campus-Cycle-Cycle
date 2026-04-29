@@ -105,8 +105,9 @@ class TestSellerIsAdmin:
         admin_headers = {"Authorization": f"Bearer {admin_token}"}
         
         # 1. 创建卖家用户
+        seller_email = f"seller2_{int(time.time())}@test.com"
         seller_response = requests.post(f"{BASE_URL}/auth/register", json={
-            "email": f"seller2_{int(time.time())}@test.com",
+            "email": seller_email,
             "password": "password123",
             "name": "Test Seller 2",
             "role": "USER"
@@ -114,7 +115,7 @@ class TestSellerIsAdmin:
         assert seller_response.status_code == 200
         
         seller_login = requests.post(f"{BASE_URL}/auth/login", json={
-            "email": f"seller2_{int(time.time())}@test.com",
+            "email": seller_email,
             "password": "password123"
         })
         seller_token = seller_login.json()["access_token"]

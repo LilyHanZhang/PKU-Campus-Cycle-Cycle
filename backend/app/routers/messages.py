@@ -95,3 +95,20 @@ def mark_as_read(
     message.is_read = True
     db.commit()
     return {"message": "已标记为已读"}
+
+@router.put("/read-all")
+def mark_all_as_read(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """一键标记所有收到的消息为已读"""
+    user_id = UUID(current_user["user_id"])
+    
+    # 标记所有收到的未读消息为已读
+    db.query(Message).filter(
+        Message.receiver_id == user_id,
+        Message.is_read == False
+    ).update({"is_read": True})
+    
+    db.commit()
+    return {"message": "已标记所有消息为已读"}

@@ -120,6 +120,19 @@ export default function ProfilePage() {
     }
   };
 
+  const markAllAsRead = async () => {
+    const token = localStorage.getItem("access_token");
+    const headers = { Authorization: `Bearer ${token}` };
+
+    try {
+      await axios.put(`${API_URL}/messages/read-all`, {}, { headers });
+      fetchMessages();
+      alert("已标记所有消息为已读");
+    } catch (error) {
+      console.error("Failed to mark all as read", error);
+    }
+  };
+
   const handleLogout = () => {
     logout();
   };
@@ -185,10 +198,23 @@ export default function ProfilePage() {
         {/* 私信模块 */}
         {showMessages && (
           <div className="bg-white rounded-2xl shadow-xl p-8 mb-8 border-t-4 border-purple-400">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-              <MessageSquare className="mr-3 text-purple-500"/>
-              我的私信
-            </h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+                <MessageSquare className="mr-3 text-purple-500"/>
+                我的私信
+              </h2>
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="flex items-center space-x-2 bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition font-bold"
+                >
+                  <span>✓ 一键已读</span>
+                  <span className="bg-white text-purple-500 px-2 py-1 rounded-full text-sm">
+                    {unreadCount}
+                  </span>
+                </button>
+              )}
+            </div>
             
             {/* 发送新消息 */}
             <div className="mb-6 p-4 bg-gray-50 rounded-lg">

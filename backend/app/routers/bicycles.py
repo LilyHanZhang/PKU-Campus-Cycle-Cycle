@@ -674,9 +674,12 @@ def get_admin_dashboard(
     ).all()
     
     # 获取待处理的预约（用户已选择时间段，等待管理员确认）
+    # 只查询买家流程的预约（pick-up = 买家取车，需要管理员确认）
+    # 卖家流程（drop-off）不需要出现在这里，因为卖家确认后直接完成
     waiting_appointments = db.query(Appointment).filter(
         Appointment.status == AppointmentStatus.PENDING.value,
-        Appointment.time_slot_id != None
+        Appointment.time_slot_id != None,
+        Appointment.type == "pick-up"  # 只查询买家流程
     ).all()
     
     # 获取已锁定但未完成的时间段（带倒计时）

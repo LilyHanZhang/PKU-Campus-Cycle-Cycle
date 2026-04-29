@@ -941,13 +941,16 @@ export default function AdminDashboard() {
                             }`}>{apt.status}</span>
                           </p>
                         </div>
-                        {apt.status === 'CONFIRMED' && (
+                        {apt.status === 'CONFIRMED' && apt.type === 'pick-up' && (
                           <button
                             onClick={() => handleConfirmPickup(apt.id)}
                             className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition"
                           >
                             确认提车
                           </button>
+                        )}
+                        {apt.status === 'CONFIRMED' && apt.type === 'drop-off' && (
+                          <p className="text-sm text-gray-500">等待线下交车完成</p>
                         )}
                       </div>
                       

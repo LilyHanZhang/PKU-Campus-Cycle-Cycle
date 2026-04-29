@@ -718,6 +718,7 @@ export default function AdminDashboard() {
                         <div key={apt.id} className="p-4 bg-gray-50 rounded-lg flex justify-between items-center">
                           <div>
                             <p className="font-bold text-gray-800">预约 ID: {apt.id.slice(0, 8)}...</p>
+                            <p className="text-sm text-gray-500">用户：{apt.username} | 车辆：{apt.bicycle_brand}</p>
                             <p className="text-sm text-gray-500">类型：{apt.type === 'pick-up' ? '取车' : '还车'}</p>
                             <p className="text-sm text-gray-500">时间段 ID: {apt.time_slot_id?.slice(0, 8)}...</p>
                           </div>
@@ -741,8 +742,8 @@ export default function AdminDashboard() {
                       {dashboardData.waiting_bicycles.map((bike: any) => (
                         <div key={bike.id} className="p-4 bg-gray-50 rounded-lg flex justify-between items-center">
                           <div>
-                            <p className="font-bold text-gray-800">{bike.brand}</p>
-                            <p className="text-sm text-gray-500">ID: {bike.id.slice(0, 8)}...</p>
+                            <p className="font-bold text-gray-800">车辆：{bike.brand}</p>
+                            <p className="text-sm text-gray-500">卖家：{bike.owner_username} | ID: {bike.id.slice(0, 8)}...</p>
                             <p className="text-sm text-gray-500">时间段 ID: {bike.time_slot_id?.slice(0, 8)}...</p>
                           </div>
                           <button
@@ -924,13 +925,16 @@ export default function AdminDashboard() {
                   <Calendar className="mr-3 text-emerald-500" />所有预约
                 </h2>
                 <div className="space-y-4">
-                  {allAppointments.map((apt: any) => (
+                  {allAppointments.map((apt: any) => {
+                    // 查找对应的自行车信息
+                    const bike = (allBikes as any[]).find((b: any) => b.id === apt.bicycle_id);
+                    return (
                     <div key={apt.id} className="p-4 bg-gray-50 rounded-lg">
                       <div className="flex justify-between items-center mb-3">
                         <div>
                           <p className="font-bold text-gray-700">预约 ID: {apt.id.substring(0, 8)}...</p>
                           <p className="text-sm text-gray-500">
-                            车辆 ID: {apt.bicycle_id.substring(0, 8)}... | 类型：{apt.type === 'drop-off' ? '交车' : '提车'}
+                            车辆：{bike ? bike.brand : '未知'} (ID: {apt.bicycle_id.substring(0, 8)}...) | 类型：{apt.type === 'drop-off' ? '交车' : '提车'}
                           </p>
                           <p className="text-sm text-gray-500">
                             状态：<span className={`px-2 py-1 rounded text-xs font-bold ${
@@ -970,7 +974,7 @@ export default function AdminDashboard() {
                         )}
                       </div>
                     </div>
-                  ))}
+                  );})}
                 </div>
               </div>
             )}

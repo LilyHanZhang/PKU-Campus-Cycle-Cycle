@@ -86,7 +86,7 @@ class TestNewBicycleStatusSystem:
         assert bike_status == "PENDING_ADMIN_CONFIRMATION_SELLER", f"应该是 PENDING_ADMIN_CONFIRMATION_SELLER，实际是 {bike_status}"
         
         print("\n【步骤 4】管理员确认时间段（→ RESERVED）")
-        confirm_response = requests.post(f"{BASE_URL}/time_slots/confirm-bicycle/{bike_id}", json={}, headers=admin_headers)
+        confirm_response = requests.put(f"{BASE_URL}/time_slots/confirm-bicycle/{bike_id}", json={}, headers=admin_headers)
         assert confirm_response.status_code == 200
         
         # 检查自行车状态
@@ -194,7 +194,7 @@ class TestNewBicycleStatusSystem:
         assert bike_status == "PENDING_ADMIN_CONFIRMATION_BUYER", f"应该是 PENDING_ADMIN_CONFIRMATION_BUYER，实际是 {bike_status}"
         
         print("\n【步骤 5】管理员确认时间段（→ SOLD）")
-        confirm_response = requests.post(f"{BASE_URL}/time_slots/confirm-bicycle/{bike_id}", json={}, headers=admin_headers)
+        confirm_response = requests.put(f"{BASE_URL}/time_slots/confirm-bicycle/{bike_id}", json={}, headers=admin_headers)
         assert confirm_response.status_code == 200
         
         # 检查自行车状态

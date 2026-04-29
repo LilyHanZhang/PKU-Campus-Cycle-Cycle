@@ -210,7 +210,6 @@ def propose_time_slots(
     
     # 更新自行车状态为待处理（等待卖家选择时间段）
     bike.status = BicycleStatus.LOCKED.value
-    db.commit()
     
     # 发送私信通知卖家
     try:
@@ -218,14 +217,19 @@ def propose_time_slots(
         # 使用管理员 ID 作为发送者
         from uuid import UUID
         admin_id = UUID(current_user["user_id"]) if isinstance(current_user["user_id"], str) else current_user["user_id"]
-        send_message_to_user(
-            db=db,
-            sender_id=admin_id,
-            receiver_id=bike.owner_id,
-            content=f"管理员已为您的自行车登记提出 {len(time_slots)} 个可选时间段，请及时登录个人中心 - 时间段选择页面进行选择。"
-        )
+        
+        # 只有当卖家和管理员不是同一个人时才发送私信
+        if admin_id != bike.owner_id:
+            send_message_to_user(
+                db=db,
+                sender_id=admin_id,
+                receiver_id=bike.owner_id,
+                content=f"管理员已为您的自行车登记提出 {len(time_slots)} 个可选时间段，请及时登录个人中心 - 时间段选择页面进行选择。"
+            )
     except Exception as e:
         print(f"Failed to send notification: {e}")
+    
+    db.commit()
     
     return {"message": f"已提出 {len(time_slots)} 个时间段，等待卖家选择", "slots": created_slots}
 

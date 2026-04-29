@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import { User, LogOut, Clock, AlertCircle } from "lucide-react";
+import { User, LogOut, Clock, AlertCircle, MessageCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import axios from "axios";
@@ -20,6 +20,7 @@ export default function Home() {
   });
   const [countdowns, setCountdowns] = useState([]);
   const [pendingCount, setPendingCount] = useState(0);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
   useEffect(() => {
     // 获取统计数据
@@ -35,8 +36,13 @@ export default function Home() {
   useEffect(() => {
     if (isAuthenticated && user) {
       fetchCountdown();
+      fetchUnreadMessages();
       const interval = setInterval(fetchCountdown, 1000); // 每秒更新
-      return () => clearInterval(interval);
+      const messageInterval = setInterval(fetchUnreadMessages, 30000); // 每 30 秒更新消息
+      return () => {
+        clearInterval(interval);
+        clearInterval(messageInterval);
+      };
     }
   }, [isAuthenticated, user]);
 
@@ -51,6 +57,19 @@ export default function Home() {
       setPendingCount(response.data.pending_count || 0);
     } catch (error) {
       console.error("Failed to fetch countdown", error);
+    }
+  };
+
+  const fetchUnreadMessages = async () => {
+    if (!isAuthenticated) return;
+    const token = localStorage.getItem("access_token");
+    try {
+      const response = await axios.get(`${API_URL}/messages/unread`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUnreadMessageCount(response.data || 0);
+    } catch (error) {
+      console.error("Failed to fetch unread messages", error);
     }
   };
 
@@ -102,9 +121,14 @@ export default function Home() {
                 </Link>
               )}
               <Link href="/profile">
-                <div className="flex items-center space-x-2 text-gray-700 hover:text-emerald-700 cursor-pointer">
+                <div className="flex items-center space-x-2 text-gray-700 hover:text-emerald-700 cursor-pointer relative">
                   <User />
                   <span className="font-bold">{user?.name || "个人中心"}</span>
+                  {unreadMessageCount > 0 && (
+                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                      {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                    </div>
+                  )}
                 </div>
               </Link>
               <button
@@ -178,6 +202,24 @@ export default function Home() {
               </div>
             </div>
           ) : null}
+        </section>
+      )}
+
+      {/* 消息通知模块 */}
+      {isAuthenticated && unreadMessageCount > 0 && (
+        <section className="w-full max-w-4xl bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-2xl p-6 shadow-xl mb-8 cursor-pointer hover:shadow-2xl transition" onClick={() => router.push('/profile')}>
+          <h2 className="text-2xl font-black mb-4 flex items-center">
+            <MessageCircle className="mr-2" />
+            您有新的消息
+          </h2>
+          <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 flex items-center">
+            <div className="text-4xl font-bold mr-4 animate-bounce">📩</div>
+            <div>
+              <p className="font-bold">您有 {unreadMessageCount} 条未读消息</p>
+              <p className="text-sm text-green-100">点击查看管理员通知和交易提醒</p>
+            </div>
+            <div className="ml-auto text-3xl">→</div>
+          </div>
         </section>
       )}
 

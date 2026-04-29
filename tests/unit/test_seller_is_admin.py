@@ -15,7 +15,7 @@ class TestSellerIsAdmin:
     """测试卖家和管理员是同一人的场景"""
     
     def test_01_admin_as_seller_can_select_time_slots(self, admin_token):
-        """测试 1：管理员作为卖家登记自行车后可以选择时间段"""
+        """测试 1：管理员作为卖家登记自行车后可以选择时间段（卖家流程）"""
         admin_headers = {"Authorization": f"Bearer {admin_token}"}
         
         # 1. 管理员作为卖家登记自行车
@@ -27,28 +27,9 @@ class TestSellerIsAdmin:
         assert response.status_code == 200
         bike_id = response.json()["id"]
         print(f"   自行车 ID: {bike_id}")
+        print(f"   自行车状态：{response.json()['status']}")
         
-        # 2. 另一个管理员审核通过
-        # 获取第二个管理员的 token
-        admin2_response = requests.post(f"{BASE_URL}/auth/login", json={
-            "email": "2200017736@stu.pku.edu.cn",
-            "password": "pkucycle"
-        })
-        admin2_token = admin2_response.json()["access_token"]
-        admin2_headers = {"Authorization": f"Bearer {admin2_token}"}
-        
-        response = requests.put(f"{BASE_URL}/bicycles/{bike_id}/approve", headers=admin2_headers)
-        assert response.status_code == 200
-        print(f"   审核后状态：{response.json()['status']}")
-        
-        # 3. 第三个管理员提出时间段
-        admin3_response = requests.post(f"{BASE_URL}/auth/login", json={
-            "email": "2200017736@stu.pku.edu.cn",
-            "password": "pkucycle"
-        })
-        admin3_token = admin3_response.json()["access_token"]
-        admin3_headers = {"Authorization": f"Bearer {admin3_token}"}
-        
+        # 2. 直接提出时间段（从 PENDING_APPROVAL 状态，这是卖家流程）
         now = datetime.now(timezone.utc)
         time_slots = [{
             "start_time": (now + timedelta(days=1)).isoformat(),
@@ -58,12 +39,12 @@ class TestSellerIsAdmin:
         response = requests.post(
             f"{BASE_URL}/bicycles/{bike_id}/propose-slots",
             json=time_slots,
-            headers=admin3_headers
+            headers=admin_headers
         )
         assert response.status_code == 200
         print(f"   提出时间段状态：{response.status_code}")
         
-        # 4. 查看预约类型
+        # 3. 查看预约类型
         response = requests.get(f"{BASE_URL}/appointments/?status=PENDING", headers=admin_headers)
         appointments = response.json()
         bike_appointment = None
@@ -76,8 +57,9 @@ class TestSellerIsAdmin:
         print(f"   预约类型：{bike_appointment['type']}")
         # 卖家流程，预约类型应该是 drop-off
         assert bike_appointment["type"] == "drop-off"
+        print(f"   ✅ 预约类型正确：drop-off（卖家送车）")
         
-        # 5. 管理员（作为卖家）查看时间段
+        # 4. 查看时间段
         response = requests.get(f"{BASE_URL}/time_slots/bicycle/{bike_id}", headers=admin_headers)
         assert response.status_code == 200
         slots = response.json()
@@ -87,8 +69,9 @@ class TestSellerIsAdmin:
         # 卖家流程，时间段类型应该是 pick-up
         print(f"   时间段类型：{slots[0]['appointment_type']}")
         assert slots[0]["appointment_type"] == "pick-up"
+        print(f"   ✅ 时间段类型正确：pick-up（管理员取车）")
         
-        # 6. 管理员（作为卖家）选择时间段
+        # 5. 管理员（作为卖家）选择时间段
         selected_slot = slots[0]
         response = requests.put(
             f"{BASE_URL}/time_slots/select-bicycle/{bike_id}",

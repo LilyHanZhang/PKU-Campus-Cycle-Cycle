@@ -498,6 +498,22 @@ export default function AdminDashboard() {
     });
   };
 
+  const handleConfirmTimeSlot = async (aptId: string) => {
+    const token = localStorage.getItem("access_token");
+    try {
+      await axios.put(
+        `${API_URL}/time_slots/confirm/${aptId}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("已确认时间段！");
+      fetchData();
+    } catch (err) {
+      console.error("Failed to confirm time slot", err);
+      alert("操作失败，请重试。");
+    }
+  };
+
   const handleConfirmPickup = async (aptId: string) => {
     const token = localStorage.getItem("access_token");
     try {
@@ -742,7 +758,7 @@ export default function AdminDashboard() {
                             <p className="text-sm text-gray-500">时间段 ID: {apt.time_slot_id?.slice(0, 8)}...</p>
                           </div>
                           <button
-                            onClick={() => handleConfirmPickup(apt.id)}
+                            onClick={() => handleConfirmTimeSlot(apt.id)}
                             className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-bold"
                           >
                             ✓ 确认时间段

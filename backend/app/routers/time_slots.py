@@ -202,6 +202,11 @@ def select_time_slot(
     # 状态改为 PENDING，等待管理员确认
     appointment.status = AppointmentStatus.PENDING.value
     
+    # 更新自行车状态为等待管理员确认
+    bicycle = db.query(Bicycle).filter(Bicycle.id == appointment.bicycle_id).first()
+    if bicycle:
+        bicycle.status = BicycleStatus.PENDING_ADMIN_CONFIRMATION_BUYER.value
+    
     # 发送私信通知管理员确认
     from ..routers.messages import send_message_to_user
     try:

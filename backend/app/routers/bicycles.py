@@ -90,23 +90,12 @@ def approve_bicycle(
     current_user: dict = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
-    """管理员批准自行车（卖家流程：卖家送车）"""
+    """管理员批准自行车（仅用于买家预约的场景）"""
     bike = db.query(Bicycle).filter(Bicycle.id == bike_id).first()
     if not bike:
         raise HTTPException(status_code=404, detail="自行车不存在")
 
-    # 审核通过
     bike.status = BicycleStatus.IN_STOCK.value
-    
-    # 创建预约（卖家流程）
-    from ..models import Appointment
-    appointment = Appointment(
-        user_id=bike.owner_id,
-        bicycle_id=bike_id,
-        type="drop-off",  # 卖家流程（卖家送车）
-        status="PENDING"
-    )
-    db.add(appointment)
     db.commit()
     db.refresh(bike)
     return bike

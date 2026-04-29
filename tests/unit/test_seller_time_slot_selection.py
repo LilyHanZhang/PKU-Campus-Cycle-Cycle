@@ -106,14 +106,13 @@ class TestSellerCanSeeTimeSlots:
         print(f"   选择后状态：{bike_status}")
         assert bike_status == "PENDING_ADMIN_CONFIRMATION_SELLER", f"应该是 PENDING_ADMIN_CONFIRMATION_SELLER，实际是 {bike_status}"
         
-        # 检查时间段是否被标记为已预订
+        # 检查另一个时间段是否仍然可用（已选择的时间段不会被返回）
         slots_response = requests.get(f"{BASE_URL}/time_slots/bicycle/{bike_id}", headers=admin_headers)
         assert slots_response.status_code == 200
-        slots = slots_response.json()
-        selected_slot_data = next((s for s in slots if s['id'] == selected_slot['id']), None)
-        assert selected_slot_data is not None
-        print(f"   选中时间段的 is_booked: {selected_slot_data['is_booked']}")
-        assert selected_slot_data['is_booked'] == 'true', "时间段应该被标记为已预订"
+        remaining_slots = slots_response.json()
+        print(f"   剩余时间段数量：{len(remaining_slots)}")
+        # 应该有 1 个剩余时间段（另一个被选择了）
+        assert len(remaining_slots) == 1, f"应该有 1 个剩余时间段，实际是 {len(remaining_slots)}"
         
         print("\n✅ 测试通过：卖家可以成功看到并选择时间段")
 

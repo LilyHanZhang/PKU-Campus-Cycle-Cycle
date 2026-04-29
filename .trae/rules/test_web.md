@@ -1,6 +1,6 @@
 # Testing
 ## Unit Tests
-Always remember to perform unit tests.
+Always remember to perform unit tests. First perform unit tests locally, after it has passed, perform unit tests on the website. 
 ## Additional Tests
 - performed when being asked to. 
 ### Backend & Database Tests

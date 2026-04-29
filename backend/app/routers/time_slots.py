@@ -380,6 +380,8 @@ def confirm_time_slot(
         elif appointment.type == "pick-up":
             # 买家流程（pick-up）：将自行车状态改为 SOLD（已售出）
             bicycle.status = BicycleStatus.SOLD.value
+            # 买家提车完成后，预约也完成
+            appointment.status = AppointmentStatus.COMPLETED.value
     
     # 发送私信通知用户
     try:

@@ -120,7 +120,11 @@ export default function AdminDashboard() {
       setPendingBikes(pendingRes.data);
       setAllUsers(usersRes.data);
       setAllBikes(bikesRes.data);
-      setAllAppointments(appointmentsRes.data);
+      // 只显示 PENDING 和 CONFIRMED 状态的预约
+      const activeAppointments = appointmentsRes.data.filter((apt: any) => 
+        apt.status === 'PENDING' || apt.status === 'CONFIRMED'
+      );
+      setAllAppointments(activeAppointments);
       setDashboardData(dashboardRes.data);
     } catch (err: any) {
       console.error("Failed to fetch data", err);
@@ -648,14 +652,19 @@ export default function AdminDashboard() {
             车辆管理 ({allBikes.length})
           </button>
           <button
-            onClick={() => setActiveTab("appointments")}
-            className={`flex-1 py-3 px-6 rounded-lg font-bold transition ${
-              activeTab === "appointments" ? "bg-[#2ab26a] text-white" : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            预约管理 ({allAppointments.length})
-          </button>
-        </div>
+              onClick={() => setActiveTab("appointments")}
+              className={`flex-1 py-3 px-6 rounded-lg font-bold transition ${
+                activeTab === "appointments" ? "bg-[#2ab26a] text-white" : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              预约管理 ({allAppointments.length})
+            </button>
+            <Link href="/history">
+              <button className="flex-1 py-3 px-6 rounded-lg font-bold transition bg-purple-100 text-purple-700 hover:bg-purple-200">
+                📋 历史记录
+              </button>
+            </Link>
+          </div>
 
         {loading ? (
           <p className="text-center py-10">加载中...</p>
@@ -937,7 +946,7 @@ export default function AdminDashboard() {
             {activeTab === "appointments" && (
               <div className="bg-white rounded-2xl shadow-xl p-8">
                 <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-                  <Calendar className="mr-3 text-emerald-500" />所有预约
+                  <Calendar className="mr-3 text-emerald-500" />活跃预约
                 </h2>
                 <div className="space-y-4">
                   {allAppointments.map((apt: any) => {

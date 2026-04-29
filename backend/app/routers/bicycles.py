@@ -114,7 +114,19 @@ def store_bicycle_in_inventory(
     if bike.status != BicycleStatus.RESERVED.value:
         raise HTTPException(status_code=400, detail="自行车状态不是已预约，无法存入库存")
     
+    # 将自行车状态改为 IN_STOCK
     bike.status = BicycleStatus.IN_STOCK.value
+    
+    # 查找对应的预约，将预约状态改为 COMPLETED
+    from ..models import Appointment, AppointmentStatus
+    appointment = db.query(Appointment).filter(
+        Appointment.bicycle_id == bike_id,
+        Appointment.status == AppointmentStatus.CONFIRMED.value
+    ).first()
+    
+    if appointment:
+        appointment.status = AppointmentStatus.COMPLETED.value
+    
     db.commit()
     db.refresh(bike)
     return bike
@@ -515,6 +527,34 @@ def list_appointments(
         print(f"❌ Error in list_appointments: {e}")
         import traceback
         traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@appointment_router.get("/completed", response_model=List[AppointmentResponse])
+def list_completed_appointments(
+    current_user: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """获取所有已完成的预约（管理员专用）"""
+    try:
+        appointments = db.query(Appointment).filter(
+            Appointment.status == AppointmentStatus.COMPLETED.value
+        ).all()
+        
+        return [AppointmentResponse(
+            id=apt.id,
+            user_id=apt.user_id,
+            bicycle_id=apt.bicycle_id,
+            type=apt.type,
+            appointment_time=apt.appointment_time,
+            notes=apt.notes,
+            status=apt.status,
+            created_at=apt.created_at
+        ) for apt in appointments]
+    except Exception as e:
+        print(f"❌ Error in list_completed_appointments: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
         raise
 
 @appointment_router.get("/user/{user_id}", response_model=List[AppointmentResponse])

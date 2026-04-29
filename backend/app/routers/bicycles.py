@@ -752,9 +752,9 @@ def get_admin_dashboard(
             {
                 "id": str(apt.id),
                 "user_id": str(apt.user_id),
-                "username": apt.user.username if apt.user else "未知",
+                "username": getattr(getattr(apt, 'user', None), 'username', None) or "未知",
                 "bicycle_id": str(apt.bicycle_id),
-                "bicycle_brand": apt.bicycle.brand if apt.bicycle else "未知",
+                "bicycle_brand": getattr(getattr(apt, 'bicycle', None), 'brand', None) or "未知",
                 "type": apt.type,
                 "status": apt.status,
                 "time_slot_id": str(apt.time_slot_id) if apt.time_slot_id else None,
@@ -766,9 +766,9 @@ def get_admin_dashboard(
                 "id": str(bike.id),
                 "brand": bike.brand,
                 "owner_id": str(bike.owner_id),
-                "owner_username": bike.owner.username if bike.owner else "未知",
+                "owner_username": getattr(getattr(bike, 'owner', None), 'username', None) or "未知",
                 "status": bike.status,
-                "time_slot_id": str(db.query(TimeSlot).filter(TimeSlot.bicycle_id == bike.id, TimeSlot.is_booked == "true").first().id) if db.query(TimeSlot).filter(TimeSlot.bicycle_id == bike.id, TimeSlot.is_booked == "true").first() else None,
+                "time_slot_id": str(getattr(db.query(TimeSlot).filter(TimeSlot.bicycle_id == bike.id, TimeSlot.is_booked == "true").first(), 'id', None)) if db.query(TimeSlot).filter(TimeSlot.bicycle_id == bike.id, TimeSlot.is_booked == "true").first() else None,
                 "created_at": bike.created_at.isoformat() if bike.created_at else None
             } for bike in waiting_bicycles
         ],

@@ -334,6 +334,12 @@ export default function AdminDashboard() {
   const handleProposeAppointmentSlots = async (aptId: string) => {
     const token = localStorage.getItem("access_token");
     
+    console.log("=== 提出时间段调试信息 ===");
+    console.log("预约 ID:", aptId);
+    console.log("预约 ID 类型:", typeof aptId);
+    console.log("预约 ID 长度:", aptId.length);
+    console.log("API URL:", `${API_URL}/appointments/${aptId}/propose-slots`);
+    
     // 创建多个时间段输入框
     const tempDiv = document.createElement('div');
     const now = new Date();
@@ -469,16 +475,20 @@ export default function AdminDashboard() {
       }
 
       try {
+        console.log("发送请求...");
         await axios.post(
           `${API_URL}/appointments/${aptId}/propose-slots`,
           timeSlots,
           { headers: { Authorization: `Bearer ${token}` } }
         );
+        console.log("请求成功！");
         alert(`✓ 已提出 ${timeSlots.length} 个时间段，等待买家选择！`);
         cleanup();
         fetchData();
       } catch (err: any) {
-        console.error("Failed to propose time slots", err);
+        console.error("请求失败:", err);
+        console.error("错误响应:", err.response?.data);
+        console.error("错误状态码:", err.response?.status);
         alert(`操作失败：${err.response?.data?.detail || "请重试"}`);
       }
     });

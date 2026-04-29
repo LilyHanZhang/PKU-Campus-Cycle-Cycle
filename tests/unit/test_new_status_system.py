@@ -128,7 +128,7 @@ class TestNewBicycleStatusSystem:
         bike_id = bicycle_response.json()["id"]
         
         # 管理员审核
-        approve_response = requests.post(f"{BASE_URL}/bicycles/{bike_id}/approve", json={}, headers=admin_headers)
+        approve_response = requests.put(f"{BASE_URL}/bicycles/{bike_id}/approve", json={}, headers=admin_headers)
         assert approve_response.status_code == 200
         
         # 检查自行车状态

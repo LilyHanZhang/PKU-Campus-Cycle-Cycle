@@ -154,8 +154,14 @@ class PostResponse(PostBase):
     id: UUID
     author_id: UUID
     created_at: datetime
+    updated_at: Optional[datetime] = None
     like_count: Optional[int] = 0
     comment_count: Optional[int] = 0
+    bookmark_count: Optional[int] = 0
+    is_bookmarked: Optional[bool] = False
+    author_name: Optional[str] = None
+    author_avatar_url: Optional[str] = None
+    hashtags: Optional[List[str]] = []
 
     class Config:
         from_attributes = True
@@ -170,6 +176,19 @@ class CommentResponse(CommentBase):
     id: UUID
     post_id: UUID
     author_id: UUID
+    created_at: datetime
+    author_name: Optional[str] = None
+    author_avatar_url: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class BookmarkCreate(BaseModel):
+    post_id: UUID
+
+class BookmarkResponse(BaseModel):
+    post_id: UUID
+    user_id: UUID
     created_at: datetime
 
     class Config:

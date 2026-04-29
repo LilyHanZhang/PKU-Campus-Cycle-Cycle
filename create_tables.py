@@ -73,6 +73,12 @@ sql_statements = [
         content TEXT,
         review_type VARCHAR(20),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''',
+    '''CREATE TABLE IF NOT EXISTS bookmarks (
+        post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
+        user_id UUID REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (post_id, user_id)
     )'''
 ]
 

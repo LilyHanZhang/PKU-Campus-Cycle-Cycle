@@ -166,3 +166,15 @@ class Message(Base):
 
     sender = relationship("User", foreign_keys=[sender_id])
     receiver = relationship("User", foreign_keys=[receiver_id])
+
+class Bookmark(Base):
+    __tablename__ = "bookmarks"
+
+    post_id = Column(UUID(as_uuid=True), ForeignKey("posts.id", ondelete="CASCADE"), primary_key=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    post = relationship("Post", back_populates="bookmarks")
+    user = relationship("User")
+
+Post.bookmarks = relationship("Bookmark", back_populates="post", cascade="all, delete-orphan")

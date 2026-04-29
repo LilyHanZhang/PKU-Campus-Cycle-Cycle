@@ -521,6 +521,7 @@ def list_appointments(
             appointment_time=apt.appointment_time,
             notes=apt.notes,
             status=apt.status,
+            time_slot_id=apt.time_slot_id,
             created_at=apt.created_at
         ) for apt in appointments]
     except Exception as e:
@@ -548,6 +549,7 @@ def list_completed_appointments(
             appointment_time=apt.appointment_time,
             notes=apt.notes,
             status=apt.status,
+            time_slot_id=apt.time_slot_id,
             created_at=apt.created_at
         ) for apt in appointments]
     except Exception as e:

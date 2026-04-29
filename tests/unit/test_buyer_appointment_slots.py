@@ -44,7 +44,7 @@ class TestBuyerAppointmentTimeSlot:
         print("\n【步骤 2】管理员审核通过")
         approve_response = requests.put(f"{BASE_URL}/bicycles/{bike_id}/approve", headers=admin_headers)
         assert approve_response.status_code == 200
-        print(f"   审核响应：{approve_response.json()['message']}")
+        print(f"   审核响应：{approve_response.json()}")
         
         # 检查自行车状态
         bike_response = requests.get(f"{BASE_URL}/bicycles/{bike_id}", headers=admin_headers)

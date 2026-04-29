@@ -54,7 +54,8 @@ class TestBuyerAppointmentTimeSlot:
         assert bike_status == "IN_STOCK", f"应该是 IN_STOCK，实际是 {bike_status}"
         
         print("\n【步骤 3】管理员创建买家预约（提车）")
-        appointment_response = requests.post(f"{BASE_URL}/bicycles/{bike_id}/appointments", json={
+        appointment_response = requests.post(f"{BASE_URL}/appointments/", json={
+            "bicycle_id": str(bike_id),
             "type": "pick-up",
             "appointment_time": (datetime.now() + timedelta(days=2)).isoformat(),
             "notes": "Test appointment"

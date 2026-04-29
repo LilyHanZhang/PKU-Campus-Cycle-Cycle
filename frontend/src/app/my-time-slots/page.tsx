@@ -32,7 +32,7 @@ export default function MyTimeSlotsPage() {
       const bikesResponse = await axios.get(`${API_URL}/bicycles/`, { headers });
       const myBikes = bikesResponse.data.filter((b: any) => 
         String(b.owner_id) === user.id && 
-        (b.status === 'LOCKED' || b.status === 'PENDING_APPROVAL')
+        (b.status === 'PENDING_SELLER_SLOT_SELECTION' || b.status === 'PENDING_APPROVAL')
       );
       
       // 获取我的预约
@@ -154,10 +154,10 @@ export default function MyTimeSlotsPage() {
                         {bike.brand} - {bike.color}
                       </h3>
                       <p className="text-sm text-gray-600">
-                        状态：{bike.status === 'LOCKED' ? '待选择时间段' : '待审核'}
+                        状态：{bike.status === 'PENDING_SELLER_SLOT_SELECTION' ? '待选择时间段' : '待审核'}
                       </p>
                     </div>
-                    {bike.status === 'LOCKED' && (
+                    {bike.status === 'PENDING_SELLER_SLOT_SELECTION' && (
                       <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
                         请选择时间段
                       </span>
@@ -189,7 +189,7 @@ export default function MyTimeSlotsPage() {
                         ))}
                       </div>
                     </div>
-                  ) : bike.status === 'LOCKED' ? (
+                  ) : bike.status === 'PENDING_SELLER_SLOT_SELECTION' ? (
                     <div className="text-center py-4 text-gray-500">
                       <AlertCircle className="w-8 h-8 mx-auto mb-2 text-yellow-500" />
                       <p>管理员还未提出时间段，请耐心等待</p>

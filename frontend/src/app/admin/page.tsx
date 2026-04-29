@@ -890,7 +890,10 @@ export default function AdminDashboard() {
                               ¥{bike.price} | 成色 {bike.condition}/10 | 状态：{
                                 bike.status === 'PENDING_APPROVAL' ? '待审核' :
                                 bike.status === 'IN_STOCK' ? '在库' :
-                                bike.status === 'LOCKED' ? '已锁定' :
+                                bike.status === 'PENDING_SELLER_SLOT_SELECTION' ? '等待卖家选择' :
+                                bike.status === 'PENDING_BUYER_SLOT_SELECTION' ? '等待买家选择' :
+                                bike.status === 'PENDING_ADMIN_CONFIRMATION_SELLER' ? '等待管理员确认（卖家）' :
+                                bike.status === 'PENDING_ADMIN_CONFIRMATION_BUYER' ? '等待管理员确认（买家）' :
                                 bike.status === 'RESERVED' ? '已预约' : '已售出'
                               }
                             </p>
@@ -898,6 +901,8 @@ export default function AdminDashboard() {
                           <span className={`px-3 py-1 text-xs font-bold rounded-full ${
                             bike.status === 'IN_STOCK' ? 'bg-green-100 text-green-700' :
                             bike.status === 'PENDING_APPROVAL' ? 'bg-yellow-100 text-yellow-700' :
+                            bike.status === 'PENDING_SELLER_SLOT_SELECTION' || bike.status === 'PENDING_BUYER_SLOT_SELECTION' ? 'bg-orange-100 text-orange-700' :
+                            bike.status === 'PENDING_ADMIN_CONFIRMATION_SELLER' || bike.status === 'PENDING_ADMIN_CONFIRMATION_BUYER' ? 'bg-purple-100 text-purple-700' :
                             bike.status === 'RESERVED' ? 'bg-blue-100 text-blue-700' :
                             'bg-gray-200 text-gray-600'
                           }`}>

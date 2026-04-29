@@ -302,6 +302,10 @@ def select_bicycle_time_slot(
     ).first()
     if appointment:
         appointment.time_slot_id = selection.time_slot_id
+        # 卖家流程和买家流程都需要管理员确认
+        # 区别在于：
+        # - 卖家流程：时间段是管理员提出的，卖家选择后等待管理员确认入库
+        # - 买家流程：时间段是买家自己选的，需要管理员确认提车
     
     # 更新自行车状态为 LOCKED（已选择时间段，等待管理员确认）
     bicycle.status = BicycleStatus.LOCKED.value
@@ -314,12 +318,22 @@ def select_bicycle_time_slot(
         from ..models import User, Role
         admins = db.query(User).filter(User.role.in_([Role.ADMIN.value, Role.SUPER_ADMIN.value])).all()
         for admin in admins:
-            send_message_to_user(
-                db=db,
-                sender_id=None,  # 系统消息
-                receiver_id=admin.id,
-                content=f"卖家已选择时间段，请确认。自行车 ID: {bike_id}"
-            )
+            if appointment and appointment.type == "drop-off":
+                # 卖家流程：通知管理员确认入库
+                send_message_to_user(
+                    db=db,
+                    sender_id=None,
+                    receiver_id=admin.id,
+                    content=f"卖家已选择时间段，请确认入库。自行车 ID: {bike_id}"
+                )
+            else:
+                # 买家流程：通知管理员确认提车
+                send_message_to_user(
+                    db=db,
+                    sender_id=None,
+                    receiver_id=admin.id,
+                    content=f"买家已选择时间段，请确认提车。自行车 ID: {bike_id}"
+                )
     except:
         pass
     

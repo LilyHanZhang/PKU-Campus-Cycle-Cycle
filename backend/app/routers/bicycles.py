@@ -702,9 +702,9 @@ def get_admin_dashboard(
             })
     
     # 获取等待管理员确认的自行车（卖家已选择时间段）
-    # 通过 TimeSlot 查询，找到 LOCKED 状态且有未预订时间段的自行车
+    # 查询 LOCKED 状态且有已预订时间段的自行车（时间段是管理员提出的，卖家已选择）
     locked_bike_ids = db.query(TimeSlot.bicycle_id).filter(
-        TimeSlot.is_booked == "false"
+        TimeSlot.is_booked == "true"
     ).distinct()
     waiting_bicycles = db.query(Bicycle).filter(
         Bicycle.status == BicycleStatus.LOCKED.value,

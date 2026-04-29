@@ -502,14 +502,14 @@ export default function AdminDashboard() {
     const token = localStorage.getItem("access_token");
     try {
       await axios.put(
-        `${API_URL}/time_slots/confirm/${aptId}`,
+        `${API_URL}/time_slots/confirm-pickup/${aptId}`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert("已确认时间段！");
+      alert("已确认提车！");
       fetchData();
     } catch (err) {
-      console.error("Failed to confirm time slot", err);
+      console.error("Failed to confirm pickup", err);
       alert("操作失败，请重试。");
     }
   };

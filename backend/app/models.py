@@ -27,6 +27,7 @@ class BicycleStatus(str, enum.Enum):
     # 买家流程状态（买家买车）
     PENDING_BUYER_SLOT_SELECTION = "PENDING_BUYER_SLOT_SELECTION"  # 管理员已提出时间段，等待买家选择
     PENDING_ADMIN_CONFIRMATION_BUYER = "PENDING_ADMIN_CONFIRMATION_BUYER"  # 买家已选择时间段，等待管理员确认
+    PENDING_PICKUP = "PENDING_PICKUP"  # 管理员已确认时间段，等待买家线下提车
     SOLD = "SOLD"  # 交易完成
 
 class AppointmentType(str, enum.Enum):

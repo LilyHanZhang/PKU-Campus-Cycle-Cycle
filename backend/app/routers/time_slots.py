@@ -374,14 +374,13 @@ def confirm_time_slot(
     if bicycle:
         # 根据预约类型设置不同的状态
         if appointment.type == "drop-off":
-            # 卖家流程（drop-off）：将自行车状态改为 RESERVED（等待线下交易）
+            # 卖家流程（drop-off）：将自行车状态改为 RESERVED（等待线下交车）
             # 线下交易完成后，管理员再将自行车存入库存（IN_STOCK）或标记为已售（SOLD）
             bicycle.status = BicycleStatus.RESERVED.value
         elif appointment.type == "pick-up":
-            # 买家流程（pick-up）：将自行车状态改为 SOLD（已售出）
-            bicycle.status = BicycleStatus.SOLD.value
-            # 买家提车完成后，预约也完成
-            appointment.status = AppointmentStatus.COMPLETED.value
+            # 买家流程（pick-up）：将自行车状态改为 PENDING_PICKUP（等待买家线下提车）
+            # 线下交易完成后，管理员再确认提车，将自行车标记为 SOLD（已售出）
+            bicycle.status = BicycleStatus.PENDING_PICKUP.value
     
     # 发送私信通知用户
     try:
@@ -462,7 +461,58 @@ def confirm_bicycle_time_slot(
     
     return {"message": "时间段确认成功"}
 
-@router.put("/change/{apt_id}", response_model=dict)
+@router.put("/confirm-pickup/{apt_id}", response_model=dict)
+def confirm_pickup(
+    apt_id: UUID,
+    current_user: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """管理员确认买家已提车（买家流程线下交易完成后）"""
+    appointment = db.query(Appointment).filter(Appointment.id == apt_id).first()
+    if not appointment:
+        raise HTTPException(status_code=404, detail="预约不存在")
+    
+    # 检查预约状态是否为 CONFIRMED
+    if appointment.status != AppointmentStatus.CONFIRMED.value:
+        raise HTTPException(status_code=400, detail="预约状态不是已确认，无法确认提车")
+    
+    # 检查预约类型是否为 pick-up
+    if appointment.type != "pick-up":
+        raise HTTPException(status_code=400, detail="该预约不是买家提车类型")
+    
+    # 检查自行车状态是否为 PENDING_PICKUP
+    bicycle = db.query(Bicycle).filter(Bicycle.id == appointment.bicycle_id).first()
+    if not bicycle:
+        raise HTTPException(status_code=404, detail="自行车不存在")
+    
+    if bicycle.status != BicycleStatus.PENDING_PICKUP.value:
+        raise HTTPException(status_code=400, detail="自行车状态不是等待提车，无法确认提车")
+    
+    # 更新自行车状态为 SOLD（已售出）
+    bicycle.status = BicycleStatus.SOLD.value
+    
+    # 更新预约状态为 COMPLETED（已完成）
+    appointment.status = AppointmentStatus.COMPLETED.value
+    
+    # 发送私信通知用户
+    try:
+        from ..routers.messages import send_message_to_user
+        from uuid import UUID
+        admin_id = UUID(current_user["user_id"]) if isinstance(current_user["user_id"], str) else current_user["user_id"]
+        send_message_to_user(
+            db=db,
+            sender_id=admin_id,
+            receiver_id=appointment.user_id,
+            content=f"管理员已确认您已提车，交易已完成。预约 ID: {apt_id}"
+        )
+    except Exception as e:
+        print(f"Failed to send notification: {e}")
+    
+    db.commit()
+    
+    return {"message": "确认提车成功，自行车已标记为已售出"}
+
+@router.put("/confirm/{apt_id}", response_model=dict)
 def change_time_slot(
     apt_id: UUID,
     new_time_slot_id: UUID,

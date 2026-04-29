@@ -201,7 +201,6 @@ def select_time_slot(
     appointment.time_slot_id = selection.time_slot_id
     # 状态改为 PENDING，等待管理员确认
     appointment.status = AppointmentStatus.PENDING.value
-    db.commit()
     
     # 发送私信通知管理员确认
     from ..routers.messages import send_message_to_user
@@ -216,8 +215,10 @@ def select_time_slot(
                 receiver_id=admin.id,
                 content=f"用户已选择时间段，请确认。预约 ID: {apt_id}"
             )
-    except:
-        pass
+    except Exception as e:
+        print(f"Failed to send notification: {e}")
+    
+    db.commit()
     
     return {"message": "时间段选择成功，等待管理员确认"}
 
@@ -309,13 +310,12 @@ def select_bicycle_time_slot(
     
     # 更新自行车状态为 LOCKED（已选择时间段，等待管理员确认）
     bicycle.status = BicycleStatus.LOCKED.value
-    db.commit()
     
     # 发送私信通知管理员确认
     from ..routers.messages import send_message_to_user
+    from ..models import User, Role
     try:
         # 获取所有管理员
-        from ..models import User, Role
         admins = db.query(User).filter(User.role.in_([Role.ADMIN.value, Role.SUPER_ADMIN.value])).all()
         for admin in admins:
             if appointment and appointment.type == "drop-off":
@@ -334,8 +334,10 @@ def select_bicycle_time_slot(
                     receiver_id=admin.id,
                     content=f"买家已选择时间段，请确认提车。自行车 ID: {bike_id}"
                 )
-    except:
-        pass
+    except Exception as e:
+        print(f"Failed to send notification: {e}")
+    
+    db.commit()
     
     return {"message": "时间段选择成功，等待管理员确认"}
 
@@ -369,10 +371,8 @@ def confirm_time_slot(
         if appointment.type == "drop-off":
             bicycle.status = BicycleStatus.RESERVED.value
         # 如果是买家流程（type 为 pick-up），将自行车状态改为 SOLD
-        elif appointment.type == "pick-up":
-            bicycle.status = BicycleStatus.SOLD.value
-    
-    db.commit()
+    elif appointment.type == "pick-up":
+        bicycle.status = BicycleStatus.SOLD.value
     
     # 发送私信通知用户
     try:
@@ -385,8 +385,10 @@ def confirm_time_slot(
             receiver_id=appointment.user_id,
             content=f"管理员已确认时间段，请按时进行交易。预约 ID: {apt_id}"
         )
-    except:
-        pass
+    except Exception as e:
+        print(f"Failed to send notification: {e}")
+    
+    db.commit()
     
     return {"message": "时间段确认成功"}
 
@@ -426,7 +428,6 @@ def confirm_bicycle_time_slot(
     
     # 更新预约状态为已确认
     appointment.status = AppointmentStatus.CONFIRMED.value
-    db.commit()
     
     # 发送私信通知用户
     try:
@@ -445,8 +446,10 @@ def confirm_bicycle_time_slot(
             receiver_id=appointment.user_id,
             content=content
         )
-    except:
-        pass
+    except Exception as e:
+        print(f"Failed to send notification: {e}")
+    
+    db.commit()
     
     return {"message": "时间段确认成功"}
 

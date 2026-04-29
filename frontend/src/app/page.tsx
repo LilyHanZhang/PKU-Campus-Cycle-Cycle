@@ -38,7 +38,7 @@ export default function Home() {
       fetchCountdown();
       fetchUnreadMessages();
       const interval = setInterval(fetchCountdown, 1000); // 每秒更新
-      const messageInterval = setInterval(fetchUnreadMessages, 30000); // 每 30 秒更新消息
+      const messageInterval = setInterval(fetchUnreadMessages, 5000); // 每 5 秒更新消息
       return () => {
         clearInterval(interval);
         clearInterval(messageInterval);

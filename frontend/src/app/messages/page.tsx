@@ -33,6 +33,7 @@ interface Message {
   created_at: string;
   sender_name?: string;
   sender_avatar_url?: string;
+  message_type?: 'text' | 'image';
 }
 
 interface Conversation {
@@ -56,7 +57,10 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [showMobileList, setShowMobileList] = useState(true);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showImageUpload, setShowImageUpload] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const API_URL = "https://pku-campus-cycle-cycle.onrender.com";
 
   useEffect(() => {
@@ -163,6 +167,79 @@ export default function MessagesPage() {
   const selectUser = (userId: string) => {
     setSelectedConversation(userId);
     setShowMobileList(false);
+  };
+
+  const handleEmojiClick = (emoji: string) => {
+    setNewMessage(prev => prev + emoji);
+    setShowEmojiPicker(false);
+  };
+
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedConversation) return;
+
+    // 验证文件类型
+    if (!file.type.startsWith('image/')) {
+      alert('请选择图片文件');
+      return;
+    }
+
+    // 验证文件大小（最大 5MB）
+    if (file.size > 5 * 1024 * 1024) {
+      alert('图片大小不能超过 5MB');
+      return;
+    }
+
+    setSending(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('receiver_id', selectedConversation);
+
+      // 上传图片到后端
+      const response = await axios.post(
+        `${API_URL}/messages/upload-image`,
+        formData,
+        {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+
+      const imageUrl = response.data.url;
+      
+      // 发送图片消息
+      await axios.post(
+        `${API_URL}/messages/`,
+        {
+          receiver_id: selectedConversation,
+          content: imageUrl,
+          message_type: 'image'
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      await fetchMessages(selectedConversation);
+      await loadAllUsers();
+    } catch (error) {
+      console.error("上传图片失败:", error);
+      alert("上传图片失败，请重试");
+    } finally {
+      setSending(false);
+      setShowImageUpload(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const deleteConversation = async (userId: string, e: React.MouseEvent) => {
@@ -427,27 +504,39 @@ export default function MessagesPage() {
                             
                             {/* 消息气泡 */}
                             <div className={`group relative`}>
-                              <div
-                                className={`px-4 py-2.5 rounded-2xl shadow-sm ${
-                                  isMe
-                                    ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-br-md'
-                                    : 'bg-white text-gray-900 border border-gray-200 rounded-bl-md'
-                                }`}
-                              >
-                                <p className="text-sm leading-relaxed">{msg.content}</p>
-                              </div>
+                              {msg.message_type === 'image' ? (
+                                <div className={`${isMe ? 'rounded-br-md' : 'rounded-bl-md'}`}>
+                                  <img
+                                    src={msg.content}
+                                    alt="图片消息"
+                                    className="max-w-full rounded-lg cursor-pointer hover:opacity-90 transition"
+                                    style={{ maxWidth: '300px', maxHeight: '300px' }}
+                                    onClick={() => window.open(msg.content, '_blank')}
+                                  />
+                                </div>
+                              ) : (
+                                <div
+                                  className={`px-4 py-2.5 rounded-2xl shadow-sm ${
+                                    isMe
+                                      ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-br-md'
+                                      : 'bg-white text-gray-900 border border-gray-200 rounded-bl-md'
+                                  }`}
+                                >
+                                  <p className="text-sm leading-relaxed">{msg.content}</p>
+                                </div>
+                              )}
                               
                               {/* 时间和已读状态 */}
                               <div className={`flex items-center space-x-1 mt-1 text-xs ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                <span className="text-gray-400">
+                                <span className={isMe ? 'text-purple-100' : 'text-gray-400'}>
                                   {new Date(msg.created_at).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}
                                 </span>
                                 {isMe && (
                                   <span>
                                     {msg.is_read ? (
-                                      <CheckCheck size={14} className="text-blue-500" />
+                                      <CheckCheck size={14} className="text-blue-300" />
                                     ) : (
-                                      <Check size={14} className="text-gray-400" />
+                                      <Check size={14} className="text-purple-200" />
                                     )}
                                   </span>
                                 )}
@@ -464,13 +553,51 @@ export default function MessagesPage() {
 
               {/* 输入框 */}
               <div className="p-4 border-t border-gray-200 bg-white">
-                <div className="flex items-end space-x-2">
-                  <button className="p-2 text-gray-400 hover:text-purple-500 hover:bg-purple-50 rounded-full transition">
+                <div className="flex items-end space-x-2 relative">
+                  {/* 表情按钮 */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className="p-2 text-gray-400 hover:text-purple-500 hover:bg-purple-50 rounded-full transition"
+                    >
+                      <Smile size={20} />
+                    </button>
+                    
+                    {/* 表情选择器 */}
+                    {showEmojiPicker && (
+                      <div className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-xl border border-gray-200 p-3 z-50 w-72 max-h-64 overflow-y-auto">
+                        <div className="grid grid-cols-8 gap-2">
+                          {['😀', '😂', '🥰', '😎', '🤔', '👍', '❤️', '🎉', '😊', '🙏', '💪', '🔥', '👏', '😭', '😅', '🤣', '😍', '🥺', '😤', '👋', '🌟', '✨', '🎊', '💯', '✅', '❌', '💡', '📱', '💬', '🎵', '🍕', '🚀'].map((emoji) => (
+                            <button
+                              key={emoji}
+                              onClick={() => handleEmojiClick(emoji)}
+                              className="text-2xl hover:bg-gray-100 rounded p-1 transition"
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* 图片按钮 */}
+                  <button
+                    onClick={handleImageClick}
+                    className="p-2 text-gray-400 hover:text-purple-500 hover:bg-purple-50 rounded-full transition"
+                  >
                     <Image size={20} />
                   </button>
-                  <button className="p-2 text-gray-400 hover:text-purple-500 hover:bg-purple-50 rounded-full transition">
-                    <Smile size={20} />
-                  </button>
+                  
+                  {/* 隐藏的文件输入 */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                  
                   <div className="flex-1 relative">
                     <textarea
                       value={newMessage}
@@ -489,7 +616,7 @@ export default function MessagesPage() {
                   </div>
                   <button
                     onClick={sendMessage}
-                    disabled={sending || !newMessage.trim()}
+                    disabled={sending || (!newMessage.trim() && !showImageUpload)}
                     className="p-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-full hover:from-purple-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition transform hover:scale-105 active:scale-95"
                   >
                     {sending ? (

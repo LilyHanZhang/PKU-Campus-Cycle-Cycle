@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, and_
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
+import os
+import uuid as uuid_lib
 
 from ..database import get_db
 from ..models import Message, User
@@ -16,7 +18,8 @@ def send_message_to_user(
     db: Session,
     sender_id: Optional[UUID],
     receiver_id: UUID,
-    content: str
+    content: str,
+    message_type: str = "text"
 ):
     """系统或用户发送私信（内部函数）"""
     if sender_id:
@@ -32,7 +35,8 @@ def send_message_to_user(
     db_message = Message(
         sender_id=sender_id,
         receiver_id=receiver_id,
-        content=content
+        content=content,
+        message_type=message_type
     )
     db.add(db_message)
     db.commit()
@@ -50,7 +54,8 @@ def send_message(
         db=db,
         sender_id=UUID(current_user["user_id"]),
         receiver_id=message.receiver_id,
-        content=message.content
+        content=message.content,
+        message_type=message.message_type
     )
 
 @router.get("/", response_model=List[MessageResponse])
@@ -202,6 +207,48 @@ def get_conversation_with_user(
         })
     
     return result
+
+@router.post("/upload-image")
+async def upload_image(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """上传图片并返回 URL"""
+    # 验证文件类型
+    allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"不支持的文件类型：{file.content_type}。只支持 JPEG, PNG, GIF, WebP"
+        )
+    
+    # 验证文件大小（5MB）
+    content = await file.read()
+    file_size = len(content)
+    if file_size > 5 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="文件大小不能超过 5MB"
+        )
+    
+    # 创建 uploads 目录
+    uploads_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
+    os.makedirs(uploads_dir, exist_ok=True)
+    
+    # 生成唯一文件名
+    file_extension = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
+    filename = f"{uuid_lib.uuid4()}.{file_extension}"
+    file_path = os.path.join(uploads_dir, filename)
+    
+    # 保存文件
+    with open(file_path, "wb") as f:
+        f.write(content)
+    
+    # 生成 URL（使用 Render 的公网 URL）
+    image_url = f"https://pku-campus-cycle-cycle.onrender.com/uploads/{filename}"
+    
+    return {"url": image_url, "filename": filename}
 
 @router.delete("/conversation/{user_id}")
 def delete_conversation_with_user(

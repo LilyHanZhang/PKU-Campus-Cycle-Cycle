@@ -125,6 +125,7 @@ class ReviewResponse(ReviewBase):
 
 class MessageBase(BaseModel):
     content: str = Field(..., min_length=1, max_length=2000)
+    message_type: str = "text"  # 'text' or 'image'
 
 class MessageCreate(MessageBase):
     receiver_id: UUID

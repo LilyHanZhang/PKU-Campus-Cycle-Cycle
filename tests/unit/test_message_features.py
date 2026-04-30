@@ -166,3 +166,62 @@ class TestMessageFeatures:
         conversations = response.json()
         user_ids = [c["user_id"] for c in conversations]
         assert test_user2["id"] not in user_ids
+    
+    def test_send_message_with_emoji(self, auth_headers: Dict[str, str], test_user2: Dict[str, Any]):
+        """测试发送带表情的消息"""
+        message_data = {
+            "receiver_id": test_user2["id"],
+            "content": f"测试表情消息 😀😂🥰 - {time.time()}",
+            "message_type": "text"
+        }
+        response = requests.post(
+            f"{BASE_URL}/messages/",
+            json=message_data,
+            headers=auth_headers
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "😀😂🥰" in data["content"]
+        assert data["message_type"] == "text"
+    
+    def test_send_image_message(self, auth_headers: Dict[str, str], test_user2: Dict[str, Any]):
+        """测试发送图片消息"""
+        # 创建测试图片
+        import base64
+        from io import BytesIO
+        try:
+            from PIL import Image
+            # 创建简单的红色图片
+            img = Image.new('RGB', (100, 100), color='red')
+            img_bytes = BytesIO()
+            img.save(img_bytes, format='JPEG')
+            img_bytes.seek(0)
+            
+            # 上传图片
+            files = {'file': ('test.jpg', img_bytes, 'image/jpeg')}
+            response = requests.post(
+                f"{BASE_URL}/messages/upload-image",
+                files=files,
+                headers=auth_headers
+            )
+            
+            if response.status_code == 200:
+                image_url = response.json()["url"]
+                
+                # 发送图片消息
+                message_data = {
+                    "receiver_id": test_user2["id"],
+                    "content": image_url,
+                    "message_type": "image"
+                }
+                response = requests.post(
+                    f"{BASE_URL}/messages/",
+                    json=message_data,
+                    headers=auth_headers
+                )
+                assert response.status_code == 200
+                data = response.json()
+                assert data["message_type"] == "image"
+                assert image_url in data["content"]
+        except ImportError:
+            pytest.skip("PIL not installed, skipping image test")

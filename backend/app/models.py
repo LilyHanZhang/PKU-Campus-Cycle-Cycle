@@ -161,6 +161,7 @@ class Message(Base):
     sender_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     receiver_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     content = Column(Text, nullable=False)
+    message_type = Column(String(20), default="text")  # 'text' or 'image'
     is_read = Column(Boolean, default=False)
     created_at = Column(DateTime, server_default=func.now())
 

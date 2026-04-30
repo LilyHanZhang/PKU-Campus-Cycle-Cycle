@@ -559,7 +559,7 @@ export default function ProfilePage() {
                         <Bookmark className="w-10 h-10 text-gray-400" />
                       </div>
                       <p className="text-gray-600 font-medium mb-4">暂无收藏</p>
-                      <Link href="/posts">
+                      <Link href="/forum">
                         <button className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-full font-bold hover:shadow-lg transition-all">
                           浏览帖子
                         </button>

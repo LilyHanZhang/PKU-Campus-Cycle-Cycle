@@ -118,6 +118,138 @@ export default function AdminDashboard() {
     }
   };
 
+  // 处理提出时间段
+  const handleProposeTimeSlots = async (bikeId: string) => {
+    const token = localStorage.getItem("access_token");
+    
+    // 创建多个时间段输入框
+    const tempDiv = document.createElement('div');
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const minDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+    
+    tempDiv.innerHTML = `
+      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 9999; max-height: 80vh; overflow-y: auto; min-width: 550px;">
+        <h3 style="margin-bottom: 15px; font-size: 20px; font-weight: bold; color: #1f2937;">为卖家提出时间段</h3>
+        <p style="margin-bottom: 15px; color: #6b7280; font-size: 14px; line-height: 1.6;">
+          <strong>使用说明：</strong><br/>
+          1. 点击日期时间输入框，会弹出日期选择器<br/>
+          2. 选择日期后，在时间部分可以直接点击小时或分钟数字进行选择<br/>
+          3. 也可以直接在输入框中手动输入时间（格式：YYYY-MM-DD HH:MM）<br/>
+          4. 请至少提出 1 个时间段（可添加多个）
+        </p>
+        <div id="slotsContainer" style="max-height: 350px; overflow-y: auto; margin-bottom: 15px;"></div>
+        <button id="addSlotBtn" style="width: 100%; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: 600;">+ 添加时间段</button>
+        <div style="display: flex; gap: 10px;">
+          <button id="submitBtn" style="flex: 1; padding: 12px; background: #2ab26a; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">提交</button>
+          <button id="cancelBtn" style="flex: 1; padding: 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">取消</button>
+        </div>
+      </div>
+      <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9998;"></div>
+    `;
+    document.body.appendChild(tempDiv);
+
+    const slotsContainer = document.getElementById('slotsContainer')!;
+    let slotCount = 0;
+
+    const addSlotInput = () => {
+      slotCount++;
+      const slotDiv = document.createElement('div');
+      slotDiv.className = 'slot-input';
+      slotDiv.style.cssText = 'margin-bottom: 12px; padding: 12px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;';
+      slotDiv.innerHTML = `
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <div style="flex: 1;">
+            <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">开始时间</label>
+            <input type="datetime-local" class="startTime" min="${minDateTime}" step="60" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+          </div>
+          <div style="flex: 1;">
+            <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">结束时间</label>
+            <input type="datetime-local" class="endTime" min="${minDateTime}" step="60" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+          </div>
+          ${slotCount > 1 ? '<button class="removeSlot" style="padding: 8px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold;">×</button>' : ''}
+        </div>
+      `;
+      slotsContainer.appendChild(slotDiv);
+
+      // 移除按钮事件
+      const removeBtn = slotDiv.querySelector('.removeSlot');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', () => {
+          if (slotsContainer.children.length > 1) {
+            slotsContainer.removeChild(slotDiv);
+          } else {
+            alert("至少需要一个时间段");
+          }
+        });
+      }
+    };
+
+    // 添加第一个时间段
+    addSlotInput();
+
+    // 添加时间段按钮
+    document.getElementById('addSlotBtn')!.addEventListener('click', addSlotInput);
+
+    // 取消按钮
+    document.getElementById('cancelBtn')!.addEventListener('click', () => {
+      document.body.removeChild(tempDiv);
+    });
+
+    // 提交按钮
+    document.getElementById('submitBtn')!.addEventListener('click', async () => {
+      const startTimeInputs = document.querySelectorAll('.startTime') as NodeListOf<HTMLInputElement>;
+      const endTimeInputs = document.querySelectorAll('.endTime') as NodeListOf<HTMLInputElement>;
+      
+      const timeSlots: Array<{start_time: string; end_time: string}> = [];
+      let hasError = false;
+
+      for (let i = 0; i < startTimeInputs.length; i++) {
+        const startTime = startTimeInputs[i].value;
+        const endTime = endTimeInputs[i].value;
+
+        if (!startTime || !endTime) {
+          alert(`请填写第 ${i + 1} 个时间段的开始和结束时间`);
+          hasError = true;
+          break;
+        }
+
+        if (new Date(startTime) >= new Date(endTime)) {
+          alert(`第 ${i + 1} 个时间段的开始时间必须早于结束时间`);
+          hasError = true;
+          break;
+        }
+
+        timeSlots.push({
+          start_time: new Date(startTime).toISOString(),
+          end_time: new Date(endTime).toISOString()
+        });
+      }
+      
+      if (hasError || timeSlots.length === 0) {
+        return;
+      }
+
+      try {
+        await axios.post(
+          `${API_URL}/bicycles/${bikeId}/propose-slots`,
+          timeSlots,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        alert(`✓ 已提出 ${timeSlots.length} 个时间段，等待卖家选择！`);
+        document.body.removeChild(tempDiv);
+        fetchData();
+      } catch (err: any) {
+        console.error("Failed to propose time slots", err);
+        alert(`操作失败：${err.response?.data?.detail || "请重试"}`);
+      }
+    });
+  };
+
   // 过滤数据
   const filteredUsers = allUsers.filter((user: any) =>
     user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -209,6 +341,13 @@ export default function AdminDashboard() {
                 >
                   <CheckCircle size={16} className="mr-1" />
                   通过
+                </button>
+                <button
+                  onClick={() => handleProposeTimeSlots(bike.id)}
+                  className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium text-sm"
+                >
+                  <Calendar size={16} className="mr-1" />
+                  提出时间段
                 </button>
                 <button
                   onClick={() => handleReject(bike.id)}
@@ -303,13 +442,31 @@ export default function AdminDashboard() {
                 <span className={`font-medium ${
                   bike.status === 'AVAILABLE' ? 'text-green-600' :
                   bike.status === 'PENDING_APPROVAL' ? 'text-yellow-600' :
+                  bike.status === 'IN_STOCK' ? 'text-blue-600' :
                   'text-gray-600'
                 }`}>
                   {bike.status === 'AVAILABLE' ? '可售' :
                    bike.status === 'PENDING_APPROVAL' ? '待审核' :
+                   bike.status === 'IN_STOCK' ? '在库' :
                    bike.status === 'SOLD' ? '已售' : '其他'}
                 </span>
               </div>
+            </div>
+            <div className="mt-4 flex gap-2">
+              {bike.status === 'IN_STOCK' && (
+                <button
+                  onClick={() => handleProposeTimeSlots(bike.id)}
+                  className="flex-1 flex items-center justify-center px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium text-sm"
+                >
+                  <Calendar size={16} className="mr-1" />
+                  提出时间段
+                </button>
+              )}
+              <Link href={`/bicycles/${bike.id}`}>
+                <button className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                  详情
+                </button>
+              </Link>
             </div>
           </div>
         </div>

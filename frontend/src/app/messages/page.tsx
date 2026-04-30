@@ -11,7 +11,6 @@ import {
   ArrowLeft,
   Image,
   Smile,
-  Plus,
   X,
   Check,
   CheckCheck
@@ -40,14 +39,15 @@ interface Conversation {
   user_id: string;
   user_name: string;
   user_avatar_url?: string;
-  last_message: Message;
+  last_message?: Message;
   unread_count: number;
-  last_message_time: string;
+  last_message_time?: string;
 }
 
 export default function MessagesPage() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -56,9 +56,6 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [showMobileList, setShowMobileList] = useState(true);
-  const [showNewMessageModal, setShowNewMessageModal] = useState(false);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const API_URL = "https://pku-campus-cycle-cycle.onrender.com";
 
@@ -67,8 +64,7 @@ export default function MessagesPage() {
       router.push("/login");
       return;
     }
-    fetchConversations();
-    fetchAllUsers();
+    loadAllUsers();
   }, [isAuthenticated, router]);
 
   useEffect(() => {
@@ -86,6 +82,25 @@ export default function MessagesPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const loadAllUsers = async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await axios.get(`${API_URL}/users/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // 获取所有用户（包括自己）
+      const users = response.data;
+      setAllUsers(users);
+      
+      // 同时加载会话列表
+      await fetchConversations();
+    } catch (error) {
+      console.error("获取用户列表失败:", error);
+      setLoading(false);
+    }
+  };
+
   const fetchConversations = async () => {
     try {
       const token = localStorage.getItem("access_token");
@@ -100,20 +115,6 @@ export default function MessagesPage() {
     }
   };
 
-  const fetchAllUsers = async () => {
-    try {
-      const token = localStorage.getItem("access_token");
-      const response = await axios.get(`${API_URL}/users/`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      // 过滤掉自己
-      const filteredUsers = response.data.filter((u: User) => u.id !== user?.id);
-      setAllUsers(filteredUsers);
-    } catch (error) {
-      console.error("获取用户列表失败:", error);
-    }
-  };
-
   const fetchMessages = async (userId: string) => {
     try {
       const token = localStorage.getItem("access_token");
@@ -121,6 +122,13 @@ export default function MessagesPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       setMessages(response.data);
+      
+      // 标记为已读
+      await axios.post(
+        `${API_URL}/messages/conversation/${userId}/read-all`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
     } catch (error) {
       console.error("获取消息失败:", error);
     }
@@ -144,7 +152,7 @@ export default function MessagesPage() {
       );
       setNewMessage("");
       await fetchMessages(selectedConversation);
-      await fetchConversations();
+      await loadAllUsers(); // 重新加载用户列表以更新最后消息时间
     } catch (error) {
       console.error("发送消息失败:", error);
     } finally {
@@ -152,30 +160,9 @@ export default function MessagesPage() {
     }
   };
 
-  const startNewConversation = async () => {
-    if (!selectedUserId) return;
-    
-    try {
-      const token = localStorage.getItem("access_token");
-      // 先发送一条消息创建对话
-      await axios.post(
-        `${API_URL}/messages/`,
-        {
-          receiver_id: selectedUserId,
-          content: "你好！"
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-      await fetchConversations();
-      setSelectedConversation(selectedUserId);
-      setShowNewMessageModal(false);
-      setSelectedUserId("");
-      setNewMessage("");
-    } catch (error) {
-      console.error("创建对话失败:", error);
-    }
+  const selectUser = (userId: string) => {
+    setSelectedConversation(userId);
+    setShowMobileList(false);
   };
 
   const deleteConversation = async (userId: string, e: React.MouseEvent) => {
@@ -187,7 +174,7 @@ export default function MessagesPage() {
       await axios.delete(`${API_URL}/messages/conversation/${userId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setConversations(conversations.filter(c => c.user_id !== userId));
+      await loadAllUsers(); // 重新加载用户列表
       if (selectedConversation === userId) {
         setSelectedConversation(null);
         setMessages([]);
@@ -199,7 +186,8 @@ export default function MessagesPage() {
     }
   };
 
-  const formatTime = (dateString: string) => {
+  const formatTime = (dateString: string | undefined) => {
+    if (!dateString) return "";
     const date = new Date(dateString);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
@@ -216,11 +204,43 @@ export default function MessagesPage() {
     }
   };
 
-  const filteredConversations = conversations.filter(conv =>
-    conv.user_name.toLowerCase().includes(searchQuery.toLowerCase())
+  // 合并所有用户和会话信息
+  const getUserList = () => {
+    const convMap = new Map(conversations.map(c => [c.user_id, c]));
+    
+    // 为每个用户创建列表项
+    const userList = allUsers.map(u => {
+      const conv = convMap.get(u.id);
+      return {
+        user_id: u.id,
+        user_name: u.name || u.email,
+        user_avatar_url: u.avatar_url,
+        last_message: conv?.last_message,
+        unread_count: conv?.unread_count || 0,
+        last_message_time: conv?.last_message_time
+      };
+    });
+    
+    // 按最后消息时间排序（最新的在前，没有消息的在后）
+    userList.sort((a, b) => {
+      if (a.last_message_time && b.last_message_time) {
+        return new Date(b.last_message_time).getTime() - new Date(a.last_message_time).getTime();
+      } else if (a.last_message_time) {
+        return -1;
+      } else if (b.last_message_time) {
+        return 1;
+      }
+      return 0;
+    });
+    
+    return userList;
+  };
+
+  const filteredUserList = getUserList().filter(u =>
+    u.user_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const selectedUserData = conversations.find(c => c.user_id === selectedConversation);
+  const selectedUserData = allUsers.find(u => u.id === selectedConversation);
 
   if (!isAuthenticated) return null;
 
@@ -242,26 +262,17 @@ export default function MessagesPage() {
             我的私信
           </h1>
         </div>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => setShowNewMessageModal(true)}
-            className="flex items-center space-x-1 bg-purple-500 text-white px-4 py-2 rounded-full hover:bg-purple-600 transition text-sm font-medium"
-          >
-            <Plus size={18} />
-            <span className="hidden sm:inline">新建对话</span>
-          </button>
-          <button
-            onClick={() => router.push("/profile")}
-            className="text-gray-600 hover:bg-gray-100 px-4 py-2 rounded-full transition font-medium"
-          >
-            返回个人中心
-          </button>
-        </div>
+        <button
+          onClick={() => router.push("/profile")}
+          className="text-gray-600 hover:bg-gray-100 px-4 py-2 rounded-full transition font-medium"
+        >
+          返回个人中心
+        </button>
       </div>
 
       {/* 主要内容区 - 左右分栏布局 */}
       <div className="flex-1 flex overflow-hidden max-w-7xl mx-auto w-full">
-        {/* 左侧：会话列表 */}
+        {/* 左侧：用户列表 */}
         <div className={`${showMobileList ? 'flex' : 'hidden'} lg:flex w-full lg:w-80 xl:w-96 flex-col bg-white border-r border-gray-200`}>
           {/* 搜索框 */}
           <div className="p-4 border-b border-gray-200">
@@ -277,44 +288,38 @@ export default function MessagesPage() {
             </div>
           </div>
 
-          {/* 会话列表 */}
+          {/* 用户列表 */}
           <div className="flex-1 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
               </div>
-            ) : filteredConversations.length === 0 ? (
+            ) : filteredUserList.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-gray-500">
                 <MessageSquare size={48} className="mb-4 opacity-20" />
-                <p className="text-sm">暂无会话</p>
-                <button
-                  onClick={() => setShowNewMessageModal(true)}
-                  className="mt-4 text-purple-500 hover:text-purple-600 font-medium"
-                >
-                  发起新对话
-                </button>
+                <p className="text-sm">暂无用户</p>
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
-                {filteredConversations.map((conv) => (
+                {filteredUserList.map((u) => (
                   <div
-                    key={conv.user_id}
-                    onClick={() => setSelectedConversation(conv.user_id)}
+                    key={u.user_id}
+                    onClick={() => selectUser(u.user_id)}
                     className={`p-4 hover:bg-gray-50 cursor-pointer transition relative group ${
-                      selectedConversation === conv.user_id ? 'bg-purple-50' : ''
+                      selectedConversation === u.user_id ? 'bg-purple-50' : ''
                     }`}
                   >
                     <div className="flex items-start space-x-3">
                       {/* 头像 */}
                       <div className="relative flex-shrink-0">
                         <img
-                          src={conv.user_avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(conv.user_name)}&background=8b5cf6&color=fff`}
-                          alt={conv.user_name}
+                          src={u.user_avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.user_name)}&background=8b5cf6&color=fff`}
+                          alt={u.user_name}
                           className="w-12 h-12 rounded-full object-cover ring-2 ring-gray-100"
                         />
-                        {conv.unread_count > 0 && (
+                        {u.unread_count > 0 && (
                           <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white flex items-center justify-center">
-                            <span className="text-white text-xs font-bold">{conv.unread_count > 9 ? '9+' : conv.unread_count}</span>
+                            <span className="text-white text-xs font-bold">{u.unread_count > 9 ? '9+' : u.unread_count}</span>
                           </div>
                         )}
                       </div>
@@ -322,35 +327,43 @@ export default function MessagesPage() {
                       {/* 消息内容 */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <h3 className="font-semibold text-gray-900 truncate">{conv.user_name}</h3>
-                          <span className="text-xs text-gray-500 flex-shrink-0">
-                            {formatTime(conv.last_message_time)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <p className={`text-sm truncate ${conv.unread_count > 0 ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
-                            {conv.last_message.content}
-                          </p>
-                          {conv.last_message.sender_id === user?.id && (
-                            <div className="flex-shrink-0 ml-2">
-                              {conv.last_message.is_read ? (
-                                <CheckCheck size={16} className="text-blue-500" />
-                              ) : (
-                                <Check size={16} className="text-gray-400" />
-                              )}
-                            </div>
+                          <h3 className="font-semibold text-gray-900 truncate">{u.user_name}</h3>
+                          {u.last_message_time && (
+                            <span className="text-xs text-gray-500 flex-shrink-0">
+                              {formatTime(u.last_message_time)}
+                            </span>
                           )}
                         </div>
+                        {u.last_message ? (
+                          <div className="flex items-center justify-between">
+                            <p className={`text-sm truncate ${u.unread_count > 0 ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+                              {u.last_message.content}
+                            </p>
+                            {u.last_message.sender_id === user?.id && (
+                              <div className="flex-shrink-0 ml-2">
+                                {u.last_message.is_read ? (
+                                  <CheckCheck size={16} className="text-blue-500" />
+                                ) : (
+                                  <Check size={16} className="text-gray-400" />
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-400">暂无消息</p>
+                        )}
                       </div>
                     </div>
 
-                    {/* 删除按钮（悬停显示） */}
-                    <button
-                      onClick={(e) => deleteConversation(conv.user_id, e)}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    {/* 删除按钮（悬停显示，只有有对话时才显示） */}
+                    {u.last_message && (
+                      <button
+                        onClick={(e) => deleteConversation(u.user_id, e)}
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -366,22 +379,24 @@ export default function MessagesPage() {
               <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-white">
                 <div className="flex items-center space-x-3">
                   <img
-                    src={selectedUserData?.user_avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUserData?.user_name || '')}&background=8b5cf6&color=fff`}
-                    alt={selectedUserData?.user_name}
+                    src={selectedUserData?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUserData?.name || '')}&background=8b5cf6&color=fff`}
+                    alt={selectedUserData?.name}
                     className="w-10 h-10 rounded-full object-cover ring-2 ring-purple-100"
                   />
                   <div>
-                    <h2 className="font-bold text-gray-900">{selectedUserData?.user_name}</h2>
+                    <h2 className="font-bold text-gray-900">{selectedUserData?.name || selectedUserData?.email}</h2>
                     <p className="text-xs text-gray-500">在线</p>
                   </div>
                 </div>
-                <button
-                  onClick={(e) => selectedConversation && deleteConversation(selectedConversation, e)}
-                  className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition"
-                  title="删除对话"
-                >
-                  <Trash2 size={20} />
-                </button>
+                {conversations.some(c => c.user_id === selectedConversation) && (
+                  <button
+                    onClick={(e) => deleteConversation(selectedConversation, e)}
+                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition"
+                    title="删除对话"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                )}
               </div>
 
               {/* 消息列表 */}
@@ -489,64 +504,11 @@ export default function MessagesPage() {
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-gray-400">
               <MessageSquare size={80} className="mb-4 opacity-20" />
-              <p className="text-lg font-medium">选择一个对话开始聊天</p>
+              <p className="text-lg font-medium">选择一个用户开始聊天</p>
             </div>
           )}
         </div>
       </div>
-
-      {/* 新建对话弹窗 */}
-      {showNewMessageModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">新建对话</h2>
-              <button
-                onClick={() => setShowNewMessageModal(false)}
-                className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="p-6">
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  选择用户
-                </label>
-                <select
-                  value={selectedUserId}
-                  onChange={(e) => setSelectedUserId(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="">请选择一个用户</option>
-                  {allUsers.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name || u.email} ({u.role === 'ADMIN' || u.role === 'SUPER_ADMIN' ? '管理员' : '用户'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => setShowNewMessageModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
-                >
-                  取消
-                </button>
-                <button
-                  onClick={startNewConversation}
-                  disabled={!selectedUserId}
-                  className="flex-1 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition font-medium"
-                >
-                  开始对话
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 自定义动画样式 */}
       <style jsx global>{`

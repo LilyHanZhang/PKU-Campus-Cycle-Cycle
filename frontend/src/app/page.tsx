@@ -12,7 +12,12 @@ import {
   ArrowRight,
   Bike,
   ShoppingCart,
-  HelpCircle
+  HelpCircle,
+  User,
+  Calendar,
+  MessageSquare,
+  Bookmark,
+  Shield
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -633,6 +638,167 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* Personal Center Features */}
+              <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl p-8 border-2 border-indigo-200 mb-8">
+                <div className="flex items-center mb-6">
+                  <User size={32} className="text-indigo-600 mr-4" />
+                  <h3 className="text-2xl font-bold text-indigo-800">个人主页功能说明</h3>
+                </div>
+                
+                <div className="space-y-6">
+                  {/* Time Slot Selection */}
+                  <div className="bg-white rounded-xl p-5 shadow-sm">
+                    <div className="flex items-start mb-3">
+                      <Calendar size={24} className="text-indigo-600 mr-3 mt-1 flex-shrink-0" />
+                      <h4 className="font-bold text-gray-900 text-lg">时间段选择</h4>
+                    </div>
+                    <div className="space-y-3 ml-10">
+                      <p className="text-gray-700 leading-relaxed">
+                        <strong className="text-indigo-600">使用场景：</strong>当您的预约审核通过后，需要选择线下交易的具体时间段。
+                      </p>
+                      <div className="bg-indigo-50 rounded-lg p-4">
+                        <p className="font-bold text-indigo-900 mb-2">操作步骤：</p>
+                        <ol className="space-y-2 text-gray-700">
+                          <li className="flex items-start">
+                            <span className="bg-indigo-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 mt-0.5">1</span>
+                            <span>进入个人主页，查看"我的预约"</span>
+                          </li>
+                          <li className="flex items-start">
+                            <span className="bg-indigo-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 mt-0.5">2</span>
+                            <span>找到状态为"待选择时间"的预约</span>
+                          </li>
+                          <li className="flex items-start">
+                            <span className="bg-indigo-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 mt-0.5">3</span>
+                            <span>点击"选择时间段"按钮</span>
+                          </li>
+                          <li className="flex items-start">
+                            <span className="bg-indigo-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 mt-0.5">4</span>
+                            <span>从管理员提供的可选时间段中选择合适的</span>
+                          </li>
+                          <li className="flex items-start">
+                            <span className="bg-indigo-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 mt-0.5">5</span>
+                            <span>确认选择，等待管理员确认</span>
+                          </li>
+                        </ol>
+                      </div>
+                      <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mt-3">
+                        <p className="text-yellow-800 text-sm">
+                          <strong>⚠️ 注意：</strong>选择时间段后，系统会自动发送私信通知管理员。请及时关注消息通知。
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Private Messaging */}
+                  <div className="bg-white rounded-xl p-5 shadow-sm">
+                    <div className="flex items-start mb-3">
+                      <MessageSquare size={24} className="text-indigo-600 mr-3 mt-1 flex-shrink-0" />
+                      <h4 className="font-bold text-gray-900 text-lg">私信功能</h4>
+                    </div>
+                    <div className="space-y-3 ml-10">
+                      <p className="text-gray-700 leading-relaxed">
+                        <strong className="text-indigo-600">功能说明：</strong>与管理员或其他用户进行私信沟通，支持文本、表情和图片。
+                      </p>
+                      <div className="bg-indigo-50 rounded-lg p-4">
+                        <p className="font-bold text-indigo-900 mb-2">使用方法：</p>
+                        <ol className="space-y-2 text-gray-700">
+                          <li className="flex items-start">
+                            <span className="bg-indigo-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 mt-0.5">1</span>
+                            <span>进入个人主页，点击"私信"标签</span>
+                          </li>
+                          <li className="flex items-start">
+                            <span className="bg-indigo-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 mt-0.5">2</span>
+                            <span>在左侧列表选择联系人（或点击"新建对话"）</span>
+                          </li>
+                          <li className="flex items-start">
+                            <span className="bg-indigo-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 mt-0.5">3</span>
+                            <span>在输入框输入消息内容</span>
+                          </li>
+                          <li className="flex items-start">
+                            <span className="bg-indigo-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 mt-0.5">4</span>
+                            <span>
+                              点击表情图标 <span className="inline-flex items-center justify-center w-5 h-5 bg-indigo-200 rounded text-xs">😊</span> 发送表情
+                            </span>
+                          </li>
+                          <li className="flex items-start">
+                            <span className="bg-indigo-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 mt-0.5">5</span>
+                            <span>
+                              点击图片图标 <span className="inline-flex items-center justify-center w-5 h-5 bg-indigo-200 rounded text-xs">🖼️</span> 上传图片
+                            </span>
+                          </li>
+                          <li className="flex items-start">
+                            <span className="bg-indigo-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 mt-0.5">6</span>
+                            <span>点击发送按钮或按 Enter 键发送</span>
+                          </li>
+                        </ol>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                        <div className="bg-green-50 border-l-4 border-green-400 p-3">
+                          <p className="text-green-800 text-sm">
+                            <strong className="text-green-600">✓ 系统通知：</strong>
+                            预约状态变更、时间段确认等操作会自动发送系统私信通知。
+                          </p>
+                        </div>
+                        <div className="bg-blue-50 border-l-4 border-blue-400 p-3">
+                          <p className="text-blue-800 text-sm">
+                            <strong className="text-blue-600">💡 提示：</strong>
+                            未读消息会在个人中心和个人主页显示红色数字徽章。
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Other Features */}
+                  <div className="bg-white rounded-xl p-5 shadow-sm">
+                    <div className="flex items-start mb-3">
+                      <Bookmark size={24} className="text-indigo-600 mr-3 mt-1 flex-shrink-0" />
+                      <h4 className="font-bold text-gray-900 text-lg">其他功能</h4>
+                    </div>
+                    <div className="space-y-3 ml-10">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-indigo-50 rounded-lg p-4">
+                          <p className="font-bold text-indigo-900 mb-2 flex items-center">
+                            <Bike size={18} className="mr-2" />
+                            我的车辆
+                          </p>
+                          <p className="text-gray-700 text-sm leading-relaxed">
+                            查看您登记的所有车辆，包括审核中、可售、已售等状态。可随时编辑或删除。
+                          </p>
+                        </div>
+                        <div className="bg-indigo-50 rounded-lg p-4">
+                          <p className="font-bold text-indigo-900 mb-2 flex items-center">
+                            <Calendar size={18} className="mr-2" />
+                            我的预约
+                          </p>
+                          <p className="text-gray-700 text-sm leading-relaxed">
+                            查看所有预约记录，包括待审核、待选择时间、已确认、已完成等状态。
+                          </p>
+                        </div>
+                        <div className="bg-indigo-50 rounded-lg p-4">
+                          <p className="font-bold text-indigo-900 mb-2 flex items-center">
+                            <Bookmark size={18} className="mr-2" />
+                            我的收藏
+                          </p>
+                          <p className="text-gray-700 text-sm leading-relaxed">
+                            查看您在社区广场收藏的帖子，方便快速访问感兴趣的内容。
+                          </p>
+                        </div>
+                        <div className="bg-indigo-50 rounded-lg p-4">
+                          <p className="font-bold text-indigo-900 mb-2 flex items-center">
+                            <Shield size={18} className="mr-2" />
+                            个人信息
+                          </p>
+                          <p className="text-gray-700 text-sm leading-relaxed">
+                            查看和编辑个人昵称、邮箱等信息。管理员可在此查看管理功能入口。
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* FAQ Section */}
               <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 border-2 border-purple-200">
                 <div className="flex items-center mb-6">
@@ -673,6 +839,20 @@ export default function Home() {
                     <h4 className="font-bold text-gray-900 mb-2">Q: 可以同时进行多个预约吗？</h4>
                     <p className="text-gray-600 leading-relaxed">
                       A: 为避免资源浪费，建议同一时间只保持一个有效预约。如需取消预约，请及时操作以便其他用户使用。
+                    </p>
+                  </div>
+
+                  <div className="bg-white rounded-xl p-5 shadow-sm">
+                    <h4 className="font-bold text-gray-900 mb-2">Q: 时间段选择后还能修改吗？</h4>
+                    <p className="text-gray-600 leading-relaxed">
+                      A: 时间段选择后，如需修改，请及时联系管理员协商。管理员确认后可以为您的预约重新提供可选时间段。
+                    </p>
+                  </div>
+
+                  <div className="bg-white rounded-xl p-5 shadow-sm">
+                    <h4 className="font-bold text-gray-900 mb-2">Q: 私信可以发送什么内容？</h4>
+                    <p className="text-gray-600 leading-relaxed">
+                      A: 私信支持发送文本消息、表情符号和图片。请注意文明用语，不要发送不当内容。
                     </p>
                   </div>
                 </div>

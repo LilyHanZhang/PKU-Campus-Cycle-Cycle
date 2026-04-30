@@ -48,7 +48,7 @@ class TestMessageFeatures:
     def test_send_message(self, auth_headers: Dict[str, str], test_user2: Dict[str, Any]):
         """测试发送消息"""
         message_data = {
-            "receiver_id": test_user2["user_id"],
+            "receiver_id": test_user2["id"],
             "content": f"测试消息 - {time.time()}"
         }
         response = requests.post(
@@ -59,13 +59,13 @@ class TestMessageFeatures:
         assert response.status_code == 200
         data = response.json()
         assert data["content"] == message_data["content"]
-        assert data["receiver_id"] == test_user2["user_id"]
+        assert data["receiver_id"] == test_user2["id"]
     
     def test_get_conversations(self, auth_headers: Dict[str, str], test_user2: Dict[str, Any]):
         """测试获取会话列表"""
         # 先发送一条消息
         message_data = {
-            "receiver_id": test_user2["user_id"],
+            "receiver_id": test_user2["id"],
             "content": "测试会话"
         }
         requests.post(f"{BASE_URL}/messages/", json=message_data, headers=auth_headers)
@@ -91,14 +91,14 @@ class TestMessageFeatures:
         """测试获取与特定用户的对话"""
         # 先发送一条消息
         message_data = {
-            "receiver_id": test_user2["user_id"],
+            "receiver_id": test_user2["id"],
             "content": "测试对话消息"
         }
         requests.post(f"{BASE_URL}/messages/", json=message_data, headers=auth_headers)
         
         # 获取对话
         response = requests.get(
-            f"{BASE_URL}/messages/conversation/{test_user2['user_id']}",
+            f"{BASE_URL}/messages/conversation/{test_user2['id']}",
             headers=auth_headers
         )
         assert response.status_code == 200
@@ -124,36 +124,45 @@ class TestMessageFeatures:
         assert isinstance(count, int)
         assert count >= 0
     
-    def test_mark_message_as_read(self, auth_headers: Dict[str, str], test_user2: Dict[str, Any]):
+    def test_mark_message_as_read(self, auth_headers: Dict[str, str], test_user: Dict[str, Any], test_user2: Dict[str, Any]):
         """测试标记消息为已读"""
-        # 先发送一条消息
+        # 需要第二个用户给当前用户发送消息
+        login_data = {
+            "email": test_user2["email"],
+            "password": "test123456"
+        }
+        response = requests.post(f"{BASE_URL}/auth/login", json=login_data)
+        token = response.json()["access_token"]
+        headers2 = {"Authorization": f"Bearer {token}"}
+        
+        # 第二个用户给第一个用户发送消息
         message_data = {
-            "receiver_id": test_user2["user_id"],
+            "receiver_id": test_user["id"],
             "content": "测试已读消息"
         }
         sent_response = requests.post(
             f"{BASE_URL}/messages/",
             json=message_data,
-            headers=auth_headers
+            headers=headers2
         )
         message_id = sent_response.json()["id"]
         
-        # 标记为已读
+        # 第一个用户标记为已读
         response = requests.put(
             f"{BASE_URL}/messages/{message_id}/read",
             headers=auth_headers
         )
         assert response.status_code == 200
         
-        # 验证已标记为已读
+        # 验证：获取第一个用户的消息列表，确认消息已读
         conv_response = requests.get(
-            f"{BASE_URL}/messages/conversation/{test_user2['user_id']}",
+            f"{BASE_URL}/messages/conversation/{test_user2['id']}",
             headers=auth_headers
         )
         messages = conv_response.json()
-        sent_msg = next((m for m in messages if m["id"] == message_id), None)
-        assert sent_msg is not None
-        assert sent_msg["is_read"] == True
+        received_msg = next((m for m in messages if m["id"] == message_id), None)
+        assert received_msg is not None
+        assert received_msg["is_read"] == True
     
     def test_mark_all_as_read(self, auth_headers: Dict[str, str]):
         """测试一键标记所有消息为已读"""
@@ -175,7 +184,7 @@ class TestMessageFeatures:
         # 发送一条包含特定关键词的消息
         keyword = f"搜索测试_{time.time()}"
         message_data = {
-            "receiver_id": test_user2["user_id"],
+            "receiver_id": test_user2["id"],
             "content": f"这是一条用于测试搜索的消息：{keyword}"
         }
         requests.post(f"{BASE_URL}/messages/", json=message_data, headers=auth_headers)
@@ -198,7 +207,7 @@ class TestMessageFeatures:
         """测试删除单条消息"""
         # 发送一条消息
         message_data = {
-            "receiver_id": test_user2["user_id"],
+            "receiver_id": test_user2["id"],
             "content": "测试删除的消息"
         }
         sent_response = requests.post(
@@ -217,7 +226,7 @@ class TestMessageFeatures:
         
         # 验证消息已被删除
         conv_response = requests.get(
-            f"{BASE_URL}/messages/conversation/{test_user2['user_id']}",
+            f"{BASE_URL}/messages/conversation/{test_user2['id']}",
             headers=auth_headers
         )
         messages = conv_response.json()
@@ -229,21 +238,21 @@ class TestMessageFeatures:
         # 先发送几条消息
         for i in range(3):
             message_data = {
-                "receiver_id": test_user2["user_id"],
+                "receiver_id": test_user2["id"],
                 "content": f"测试删除对话的消息 {i}"
             }
             requests.post(f"{BASE_URL}/messages/", json=message_data, headers=auth_headers)
         
         # 删除对话
         response = requests.delete(
-            f"{BASE_URL}/messages/conversation/{test_user2['user_id']}",
+            f"{BASE_URL}/messages/conversation/{test_user2['id']}",
             headers=auth_headers
         )
         assert response.status_code == 200
         
         # 验证对话已被删除
         conv_response = requests.get(
-            f"{BASE_URL}/messages/conversation/{test_user2['user_id']}",
+            f"{BASE_URL}/messages/conversation/{test_user2['id']}",
             headers=auth_headers
         )
         messages = conv_response.json()
@@ -256,7 +265,7 @@ class TestMessageFeatures:
             f"{BASE_URL}/auth/me",
             headers=auth_headers
         )
-        current_user_id = user_response.json()["user_id"]
+        current_user_id = user_response.json()["id"]
         
         # 给自己发送消息
         message_data = {

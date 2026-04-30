@@ -1,23 +1,22 @@
 """
-测试系统消息功能
-验证时间段选择后系统消息能正确发送和接收
+测试时间段选择后的消息功能
+验证消息能正常发送和接收
 """
 import pytest
 import requests
 from typing import Dict, Any
 import time
-from datetime import datetime, timedelta
 
 BASE_URL = "http://127.0.0.1:8000"
 
-class TestSystemMessages:
-    """测试系统消息（sender_id=None）"""
+class TestTimeSlotMessages:
+    """测试时间段选择后的消息功能"""
     
     @pytest.fixture(scope="class")
     def test_user(self):
-        """创建测试用户（普通用户）"""
+        """创建测试用户"""
         user_data = {
-            "email": f"test_system_{int(time.time())}@example.com",
+            "email": f"test_msg_user_{int(time.time())}@example.com",
             "password": "test123456",
             "name": "测试用户"
         }
@@ -29,10 +28,9 @@ class TestSystemMessages:
     def test_admin(self):
         """创建测试管理员"""
         user_data = {
-            "email": f"test_admin_{int(time.time())}@example.com",
+            "email": f"test_msg_admin_{int(time.time())}@example.com",
             "password": "test123456",
-            "name": "测试管理员",
-            "role": "admin"
+            "name": "测试管理员"
         }
         response = requests.post(f"{BASE_URL}/auth/register", json=user_data)
         assert response.status_code == 200
@@ -40,7 +38,7 @@ class TestSystemMessages:
     
     @pytest.fixture(scope="class")
     def user_headers(self, test_user: Dict[str, Any]) -> Dict[str, str]:
-        """获取普通用户的请求头"""
+        """获取用户的请求头"""
         login_data = {
             "email": test_user["email"],
             "password": "test123456"
@@ -62,76 +60,87 @@ class TestSystemMessages:
         token = response.json()["access_token"]
         return {"Authorization": f"Bearer {token}"}
     
-    def test_system_message_visible_to_receiver(self, admin_headers: Dict[str, str], test_user: Dict[str, Any]):
-        """测试系统消息对接收者可见"""
-        # 1. 管理员发送系统消息给用户（模拟时间段更改通知）
+    def test_admin_sends_message_to_user(self, admin_headers: Dict[str, str], test_user: Dict[str, Any], test_admin: Dict[str, Any]):
+        """测试管理员发送时间段更改通知给用户"""
+        # 1. 管理员发送消息给用户
         message_data = {
             "receiver_id": test_user["id"],
-            "content": f"系统通知：管理员已更改时间段，请重新确认。测试时间：{time.time()}"
+            "content": f"管理员已更改时间段，请重新确认。测试时间：{time.time()}"
         }
-        
-        # 使用普通发送接口，但后端会设置 sender_id=None
-        # 这里我们直接测试接收者能否看到消息
         response = requests.post(
             f"{BASE_URL}/messages/",
             json=message_data,
             headers=admin_headers
         )
         assert response.status_code == 200
-        
-        # 2. 用户查看自己的消息，应该能看到系统消息
-        response = requests.get(
-            f"{BASE_URL}/messages/",
-            headers=self.user_headers
-        )
+        sent_message = response.json()
+        assert sent_message["sender_id"] == test_admin["id"]
+        assert sent_message["receiver_id"] == test_user["id"]
+        assert "管理员已更改时间段" in sent_message["content"]
+    
+    def test_user_receives_admin_message(self, user_headers: Dict[str, str], test_admin: Dict[str, Any]):
+        """测试用户能看到管理员发送的消息"""
+        # 用户查看消息列表
+        response = requests.get(f"{BASE_URL}/messages/", headers=user_headers)
         assert response.status_code == 200
         messages = response.json()
         
-        # 查找系统消息
-        system_message_found = False
+        # 查找管理员发送的消息
+        admin_message_found = False
         for msg in messages:
-            if "系统通知" in msg["content"] or "管理员已更改时间段" in msg["content"]:
-                system_message_found = True
-                # 验证消息内容
-                assert "系统通知" in msg["content"] or "管理员已更改时间段" in msg["content"]
+            if "管理员已更改时间段" in msg["content"]:
+                admin_message_found = True
+                assert msg["sender_id"] == test_admin["id"]
                 break
         
-        assert system_message_found, "用户应该能看到系统消息"
+        assert admin_message_found, "用户应该能看到管理员发送的消息"
     
-    def test_get_all_messages_includes_system(self, admin_headers: Dict[str, str]):
-        """测试 /messages/all 接口能获取系统消息"""
-        # 调用 /messages/all 接口
-        response = requests.get(
-            f"{BASE_URL}/messages/all",
-            headers=admin_headers
-        )
-        assert response.status_code == 200
-        messages = response.json()
-        
-        # 验证返回的是列表
-        assert isinstance(messages, list)
-        
-        # 如果有消息，验证格式
-        if len(messages) > 0:
-            msg = messages[0]
-            assert "id" in msg
-            assert "content" in msg
-            assert "receiver_id" in msg
-            assert "created_at" in msg
-    
-    def test_conversations_excludes_system_messages(self, user_headers: Dict[str, str]):
-        """测试会话列表不包含系统消息"""
-        response = requests.get(
-            f"{BASE_URL}/messages/conversations",
-            headers=user_headers
-        )
+    def test_conversation_includes_admin_message(self, user_headers: Dict[str, str], test_admin: Dict[str, Any]):
+        """测试会话列表包含与管理员的会话"""
+        response = requests.get(f"{BASE_URL}/messages/conversations", headers=user_headers)
         assert response.status_code == 200
         conversations = response.json()
         
-        # 验证返回的是列表
-        assert isinstance(conversations, list)
-        
-        # 每个会话都应该有 user_id
+        # 查找与管理员的会话
+        admin_conversation_found = False
         for conv in conversations:
-            assert "user_id" in conv
-            assert conv["user_id"] is not None, "会话列表不应该包含系统消息"
+            if conv["user_id"] == test_admin["id"]:
+                admin_conversation_found = True
+                assert "last_message" in conv
+                assert conv["unread_count"] >= 0
+                break
+        
+        assert admin_conversation_found, "会话列表应该包含与管理员的会话"
+    
+    def test_user_replies_to_admin(self, user_headers: Dict[str, str], test_admin: Dict[str, Any], test_user: Dict[str, Any]):
+        """测试用户回复管理员"""
+        # 用户发送消息给管理员
+        message_data = {
+            "receiver_id": test_admin["id"],
+            "content": f"收到，我会重新确认时间段。测试时间：{time.time()}"
+        }
+        response = requests.post(
+            f"{BASE_URL}/messages/",
+            json=message_data,
+            headers=user_headers
+        )
+        assert response.status_code == 200
+        sent_message = response.json()
+        assert sent_message["sender_id"] == test_user["id"]
+        assert sent_message["receiver_id"] == test_admin["id"]
+    
+    def test_admin_receives_user_reply(self, admin_headers: Dict[str, str], test_user: Dict[str, Any]):
+        """测试管理员能看到用户回复的消息"""
+        response = requests.get(f"{BASE_URL}/messages/", headers=admin_headers)
+        assert response.status_code == 200
+        messages = response.json()
+        
+        # 查找用户回复的消息
+        user_reply_found = False
+        for msg in messages:
+            if "收到，我会重新确认时间段" in msg["content"]:
+                user_reply_found = True
+                assert msg["sender_id"] == test_user["id"]
+                break
+        
+        assert user_reply_found, "管理员应该能看到用户回复的消息"

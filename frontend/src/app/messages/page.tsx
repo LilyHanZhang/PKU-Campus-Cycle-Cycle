@@ -22,6 +22,7 @@ interface User {
   name: string;
   avatar_url?: string;
   email: string;
+  role?: string;
 }
 
 interface Message {

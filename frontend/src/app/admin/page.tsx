@@ -3,7 +3,21 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import { User, Bike, Calendar, Shield, Trash2 } from "lucide-react";
+import { 
+  LayoutDashboard, 
+  Truck, 
+  Users, 
+  Calendar, 
+  History, 
+  CheckCircle, 
+  XCircle, 
+  Clock, 
+  AlertCircle,
+  ChevronRight,
+  Package,
+  Timer,
+  UserCheck
+} from "lucide-react";
 
 // 生产环境 API 地址
 const API_URL = "https://pku-campus-cycle-cycle.onrender.com";
@@ -46,13 +60,28 @@ function CountdownTimer({ slot }: { slot: any }) {
   const isUrgent = timeLeft < 3600; // Less than 1 hour
 
   return (
-    <div className={`p-4 rounded-lg border-2 ${isUrgent ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
+    <div className={`p-5 rounded-2xl border-2 transition-all ${
+      isUrgent 
+        ? 'border-red-300 bg-red-50 shadow-lg shadow-red-100' 
+        : 'border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100'
+    }`}>
       <div className="flex justify-between items-center">
         <div>
-          <p className="font-bold text-gray-800">时间段：{new Date(slot.start_time).toLocaleString()}</p>
-          <p className="text-sm text-gray-500">类型：{slot.appointment_type === 'pick-up' ? '取车' : '还车'}</p>
+          <div className="flex items-center space-x-2 mb-2">
+            <Clock size={18} className={isUrgent ? 'text-red-500' : 'text-slate-400'} />
+            <p className="font-bold text-gray-800">时间段：{new Date(slot.start_time).toLocaleString('zh-CN')}</p>
+          </div>
+          <p className="text-sm text-gray-500 ml-7">
+            类型：<span className={`font-bold ${
+              slot.appointment_type === 'pick-up' ? 'text-amber-600' : 'text-blue-600'
+            }`}>
+              {slot.appointment_type === 'pick-up' ? '取车' : '还车'}
+            </span>
+          </p>
         </div>
-        <div className={`text-2xl font-bold ${isUrgent ? 'text-red-600' : 'text-emerald-600'}`}>
+        <div className={`text-3xl font-black ${
+          isUrgent ? 'text-red-600' : 'text-emerald-600'
+        }`}>
           {timeLeft > 0 ? formatTime(timeLeft) : '已过期'}
         </div>
       </div>
@@ -603,84 +632,104 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen p-8 relative overflow-hidden"
-         style={{
-           backgroundImage: `url('https://images.unsplash.com/photo-1517504868000-42037c71215e?q=80&w=2070&auto=format&fit=crop')`,
-           backgroundSize: 'cover',
-           backgroundPosition: 'center',
-           backgroundAttachment: 'fixed'
-         }}>
-      {/* Overlay for better readability */}
-      <div className="absolute inset-0 bg-gray-100/95 backdrop-blur-sm"></div>
-      
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
       {/* Content */}
-      <div className="relative z-10 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-4xl font-extrabold text-gray-800">管理后台</h1>
-            <span className={`text-sm font-bold px-3 py-1 rounded-full ${
-              user.role === "SUPER_ADMIN" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
-            }`}>
-              {user.role === "SUPER_ADMIN" ? "主负责人" : "管理员"}
-            </span>
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="bg-white rounded-3xl shadow-xl p-6 mb-8 border border-slate-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg">
+                <LayoutDashboard size={28} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-800">管理后台</h1>
+                <p className="text-sm text-gray-500 mt-1">燕园易骑 · 校园自行车交易平台</p>
+              </div>
+              <span className={`ml-4 px-4 py-1.5 rounded-full text-sm font-bold ${
+                user.role === "SUPER_ADMIN" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
+              }`}>
+                {user.role === "SUPER_ADMIN" ? "主负责人" : "管理员"}
+              </span>
+            </div>
+            <Link href="/" className="text-gray-600 font-medium hover:text-emerald-600 transition-colors flex items-center">
+              返回首页
+              <ChevronRight size={16} className="ml-1" />
+            </Link>
           </div>
-          <Link href="/" className="text-gray-600 font-bold hover:underline">返回首页</Link>
         </div>
 
         {error && (
-          <div className="bg-red-100 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4">
-            {error}
+          <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-2xl mb-6 flex items-center shadow-lg">
+            <AlertCircle size={20} className="mr-3" />
+            <span className="font-medium">{error}</span>
           </div>
         )}
 
         {/* Tabs */}
-        <div className="flex space-x-4 mb-6 bg-white rounded-xl p-2 shadow-lg">
+        <div className="flex space-x-2 mb-8 bg-white rounded-2xl p-2 shadow-lg border border-slate-100">
           <button
             onClick={() => setActiveTab("dashboard")}
-            className={`flex-1 py-3 px-6 rounded-lg font-bold transition ${
-              activeTab === "dashboard" ? "bg-[#2ab26a] text-white" : "text-gray-600 hover:bg-gray-100"
+            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center ${
+              activeTab === "dashboard" 
+                ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md" 
+                : "text-gray-600 hover:bg-gray-50"
             }`}
           >
+            <LayoutDashboard size={18} className="mr-2" />
             仪表盘 ({dashboardData?.pending_bicycles_count || 0})
           </button>
           <button
             onClick={() => setActiveTab("pending")}
-            className={`flex-1 py-3 px-6 rounded-lg font-bold transition ${
-              activeTab === "pending" ? "bg-[#2ab26a] text-white" : "text-gray-600 hover:bg-gray-100"
+            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center ${
+              activeTab === "pending" 
+                ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md" 
+                : "text-gray-600 hover:bg-gray-50"
             }`}
           >
+            <CheckCircle size={18} className="mr-2" />
             待审核车辆 ({pendingBikes.length})
           </button>
           <button
             onClick={() => setActiveTab("users")}
-            className={`flex-1 py-3 px-6 rounded-lg font-bold transition ${
-              activeTab === "users" ? "bg-[#2ab26a] text-white" : "text-gray-600 hover:bg-gray-100"
+            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center ${
+              activeTab === "users" 
+                ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md" 
+                : "text-gray-600 hover:bg-gray-50"
             }`}
           >
+            <Users size={18} className="mr-2" />
             用户管理 ({allUsers.length})
           </button>
           <button
             onClick={() => setActiveTab("bikes")}
-            className={`flex-1 py-3 px-6 rounded-lg font-bold transition ${
-              activeTab === "bikes" ? "bg-[#2ab26a] text-white" : "text-gray-600 hover:bg-gray-100"
+            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center ${
+              activeTab === "bikes" 
+                ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md" 
+                : "text-gray-600 hover:bg-gray-50"
             }`}
           >
+            <Truck size={18} className="mr-2" />
             车辆管理 ({allBikes.length})
           </button>
           <button
-              onClick={() => setActiveTab("appointments")}
-              className={`flex-1 py-3 px-6 rounded-lg font-bold transition ${
-                activeTab === "appointments" ? "bg-[#2ab26a] text-white" : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              预约管理 ({allAppointments.length})
+            onClick={() => setActiveTab("appointments")}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center ${
+              activeTab === "appointments" 
+                ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md" 
+                : "text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <Calendar size={18} className="mr-2" />
+            预约管理 ({allAppointments.length})
+          </button>
+          <Link href="/history">
+            <button className="flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 shadow-md flex items-center justify-center">
+              <History size={18} className="mr-2" />
+              历史记录
             </button>
-            <Link href="/history">
-              <button className="flex-1 py-3 px-6 rounded-lg font-bold transition bg-purple-100 text-purple-700 hover:bg-purple-200">
-                📋 历史记录
-              </button>
-            </Link>
-          </div>
+          </Link>
+        </div>
 
         {loading ? (
           <p className="text-center py-10">加载中...</p>
@@ -690,29 +739,58 @@ export default function AdminDashboard() {
             {activeTab === "dashboard" && dashboardData && (
               <div className="space-y-6">
                 {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl shadow-xl p-6">
-                    <h3 className="text-lg font-bold mb-2">待处理自行车登记</h3>
-                    <p className="text-4xl font-extrabold">{dashboardData.pending_bicycles_count}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-3xl shadow-xl p-6 hover:shadow-2xl transition-all hover:-translate-y-1">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                        <Package size={24} />
+                      </div>
+                      <span className="text-xs font-bold bg-white/20 backdrop-blur-sm px-2 py-1 rounded-lg">待处理</span>
+                    </div>
+                    <h3 className="text-sm font-medium text-blue-100 mb-2">待处理自行车登记</h3>
+                    <p className="text-5xl font-extrabold">{dashboardData.pending_bicycles_count}</p>
                   </div>
-                  <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-2xl shadow-xl p-6">
-                    <h3 className="text-lg font-bold mb-2">等待确认预约</h3>
-                    <p className="text-4xl font-extrabold">{dashboardData.pending_appointments_count}</p>
+                  <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-3xl shadow-xl p-6 hover:shadow-2xl transition-all hover:-translate-y-1">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                        <Clock size={24} />
+                      </div>
+                      <span className="text-xs font-bold bg-white/20 backdrop-blur-sm px-2 py-1 rounded-lg">等待中</span>
+                    </div>
+                    <h3 className="text-sm font-medium text-purple-100 mb-2">等待确认预约</h3>
+                    <p className="text-5xl font-extrabold">{dashboardData.pending_appointments_count}</p>
                   </div>
-                  <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white rounded-2xl shadow-xl p-6">
-                    <h3 className="text-lg font-bold mb-2">等待确认自行车</h3>
-                    <p className="text-4xl font-extrabold">{dashboardData.waiting_bicycles ? dashboardData.waiting_bicycles.length : 0}</p>
+                  <div className="bg-gradient-to-br from-amber-500 to-amber-600 text-white rounded-3xl shadow-xl p-6 hover:shadow-2xl transition-all hover:-translate-y-1">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                        <Truck size={24} />
+                      </div>
+                      <span className="text-xs font-bold bg-white/20 backdrop-blur-sm px-2 py-1 rounded-lg">待确认</span>
+                    </div>
+                    <h3 className="text-sm font-medium text-amber-100 mb-2">等待确认自行车</h3>
+                    <p className="text-5xl font-extrabold">{dashboardData.waiting_bicycles ? dashboardData.waiting_bicycles.length : 0}</p>
                   </div>
-                  <div className="bg-gradient-to-br from-orange-500 to-orange-600 text-white rounded-2xl shadow-xl p-6">
-                    <h3 className="text-lg font-bold mb-2">已锁定时间段</h3>
-                    <p className="text-4xl font-extrabold">{dashboardData.locked_slots_with_countdown.length}</p>
+                  <div className="bg-gradient-to-br from-rose-500 to-rose-600 text-white rounded-3xl shadow-xl p-6 hover:shadow-2xl transition-all hover:-translate-y-1">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                        <Timer size={24} />
+                      </div>
+                      <span className="text-xs font-bold bg-white/20 backdrop-blur-sm px-2 py-1 rounded-lg">已锁定</span>
+                    </div>
+                    <h3 className="text-sm font-medium text-rose-100 mb-2">已锁定时间段</h3>
+                    <p className="text-5xl font-extrabold">{dashboardData.locked_slots_with_countdown.length}</p>
                   </div>
                 </div>
 
                 {/* Countdown Timer */}
                 {dashboardData.locked_slots_with_countdown.length > 0 && (
-                  <div className="bg-white rounded-2xl shadow-xl p-6">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-4">⏰ 即将到期的时间段</h2>
+                  <div className="bg-white rounded-3xl shadow-xl p-6 border border-slate-100">
+                    <div className="flex items-center mb-6">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center mr-3">
+                        <Timer size={20} className="text-white" />
+                      </div>
+                      <h2 className="text-2xl font-bold text-gray-800">⏰ 即将到期的时间段</h2>
+                    </div>
                     <div className="space-y-4">
                       {dashboardData.locked_slots_with_countdown.map((slot: any) => (
                         <CountdownTimer key={slot.id} slot={slot} />
@@ -723,20 +801,26 @@ export default function AdminDashboard() {
 
                 {/* Pending Bicycles List */}
                 {dashboardData.pending_bicycles.length > 0 && (
-                  <div className="bg-white rounded-2xl shadow-xl p-6">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-4">待处理自行车登记</h2>
+                  <div className="bg-white rounded-3xl shadow-xl p-6 border border-slate-100">
+                    <div className="flex items-center mb-6">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mr-3">
+                        <Package size={20} className="text-white" />
+                      </div>
+                      <h2 className="text-2xl font-bold text-gray-800">待处理自行车登记</h2>
+                    </div>
                     <div className="space-y-3">
                       {dashboardData.pending_bicycles.map((bike: any) => (
-                        <div key={bike.id} className="p-4 bg-gray-50 rounded-lg flex justify-between items-center">
+                        <div key={bike.id} className="p-5 bg-gradient-to-r from-slate-50 to-slate-100 rounded-2xl flex justify-between items-center hover:shadow-md transition-all">
                           <div>
-                            <p className="font-bold text-gray-800">{bike.brand}</p>
-                            <p className="text-sm text-gray-500">ID: {bike.id.slice(0, 8)}...</p>
+                            <p className="font-bold text-gray-800 text-lg">{bike.brand}</p>
+                            <p className="text-sm text-gray-500 mt-1">ID: {bike.id.slice(0, 8)}...</p>
                           </div>
                           <button
                             onClick={() => setActiveTab("pending")}
-                            className="px-4 py-2 bg-[#2ab26a] text-white rounded-lg hover:bg-[#249a5c]"
+                            className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 font-bold shadow-md transition-all flex items-center"
                           >
                             处理
+                            <ChevronRight size={16} className="ml-1" />
                           </button>
                         </div>
                       ))}
@@ -746,22 +830,38 @@ export default function AdminDashboard() {
 
                 {/* Pending Appointments List */}
                 {dashboardData.waiting_appointments && dashboardData.waiting_appointments.length > 0 && (
-                  <div className="bg-white rounded-2xl shadow-xl p-6">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-4">⏳ 等待确认的预约（买家已选时间段）</h2>
+                  <div className="bg-white rounded-3xl shadow-xl p-6 border border-slate-100">
+                    <div className="flex items-center mb-6">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mr-3">
+                        <Clock size={20} className="text-white" />
+                      </div>
+                      <h2 className="text-2xl font-bold text-gray-800">⏳ 等待确认的预约（买家已选时间段）</h2>
+                    </div>
                     <div className="space-y-3">
                       {dashboardData.waiting_appointments.map((apt: any) => (
-                        <div key={apt.id} className="p-4 bg-gray-50 rounded-lg flex justify-between items-center">
-                          <div>
-                            <p className="font-bold text-gray-800">预约 ID: {apt.id.slice(0, 8)}...</p>
-                            <p className="text-sm text-gray-500">用户：{apt.username} | 车辆：{apt.bicycle_brand}</p>
-                            <p className="text-sm text-gray-500">类型：{apt.type === 'pick-up' ? '取车' : '还车'}</p>
-                            <p className="text-sm text-gray-500">时间段 ID: {apt.time_slot_id?.slice(0, 8)}...</p>
+                        <div key={apt.id} className="p-5 bg-gradient-to-r from-purple-50 to-purple-100/50 rounded-2xl flex justify-between items-center hover:shadow-md transition-all">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <span className="px-3 py-1 bg-purple-200 text-purple-700 rounded-full text-xs font-bold">预约</span>
+                              <p className="font-bold text-gray-800">ID: {apt.id.slice(0, 8)}...</p>
+                            </div>
+                            <div className="flex items-center space-x-4 text-sm text-gray-600">
+                              <span>用户：<span className="font-bold">{apt.username}</span></span>
+                              <span>车辆：<span className="font-bold">{apt.bicycle_brand}</span></span>
+                              <span className={`px-2 py-1 rounded ${
+                                apt.type === 'pick-up' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                              }`}>
+                                {apt.type === 'pick-up' ? '取车' : '还车'}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2">时间段 ID: {apt.time_slot_id?.slice(0, 8)}...</p>
                           </div>
                           <button
                             onClick={() => handleConfirmTimeSlot(apt.id)}
-                            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-bold"
+                            className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 font-bold shadow-md transition-all flex items-center"
                           >
-                            ✓ 确认时间段
+                            <CheckCircle size={18} className="mr-2" />
+                            确认时间段
                           </button>
                         </div>
                       ))}
@@ -771,21 +871,33 @@ export default function AdminDashboard() {
 
                 {/* Waiting Bicycles List */}
                 {dashboardData.waiting_bicycles && dashboardData.waiting_bicycles.length > 0 && (
-                  <div className="bg-white rounded-2xl shadow-xl p-6">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-4">⏳ 等待确认的自行车（卖家已选时间段）</h2>
+                  <div className="bg-white rounded-3xl shadow-xl p-6 border border-slate-100">
+                    <div className="flex items-center mb-6">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center mr-3">
+                        <Truck size={20} className="text-white" />
+                      </div>
+                      <h2 className="text-2xl font-bold text-gray-800">⏳ 等待确认的自行车（卖家已选时间段）</h2>
+                    </div>
                     <div className="space-y-3">
                       {dashboardData.waiting_bicycles.map((bike: any) => (
-                        <div key={bike.id} className="p-4 bg-gray-50 rounded-lg flex justify-between items-center">
-                          <div>
-                            <p className="font-bold text-gray-800">车辆：{bike.brand}</p>
-                            <p className="text-sm text-gray-500">卖家：{bike.owner_username} | ID: {bike.id.slice(0, 8)}...</p>
-                            <p className="text-sm text-gray-500">时间段 ID: {bike.time_slot_id?.slice(0, 8)}...</p>
+                        <div key={bike.id} className="p-5 bg-gradient-to-r from-amber-50 to-amber-100/50 rounded-2xl flex justify-between items-center hover:shadow-md transition-all">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <span className="px-3 py-1 bg-amber-200 text-amber-700 rounded-full text-xs font-bold">车辆</span>
+                              <p className="font-bold text-gray-800">车辆：{bike.brand}</p>
+                            </div>
+                            <div className="flex items-center space-x-4 text-sm text-gray-600">
+                              <span>卖家：<span className="font-bold">{bike.owner_username}</span></span>
+                              <span>ID: {bike.id.slice(0, 8)}...</span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2">时间段 ID: {bike.time_slot_id?.slice(0, 8)}...</p>
                           </div>
                           <button
                             onClick={() => handleConfirmBicycle(bike.id)}
-                            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-bold"
+                            className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 font-bold shadow-md transition-all flex items-center"
                           >
-                            ✓ 确认交易
+                            <CheckCircle size={18} className="mr-2" />
+                            确认交易
                           </button>
                         </div>
                       ))}
@@ -867,15 +979,15 @@ export default function AdminDashboard() {
             {activeTab === "users" && (
               <div className="bg-white rounded-2xl shadow-xl p-8">
                 <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-                  <User className="mr-3 text-emerald-500" />用户管理
+                  <Users className="mr-3 text-emerald-500" />用户管理
                 </h2>
                 {user.role === "SUPER_ADMIN" ? (
                   <div className="space-y-4">
                     {allUsers.map((u: any) => (
                       <div key={u.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
                         <div className="flex items-center space-x-4">
-                          <div className="bg-gray-200 p-3 rounded-full">
-                            <User size={24} className="text-gray-600" />
+                          <div className="bg-gradient-to-br from-blue-400 to-blue-600 p-3 rounded-full text-white font-bold">
+                            {(u.name || u.email).charAt(0).toUpperCase()}
                           </div>
                           <div>
                             <p className="font-bold text-gray-700">{u.name || "未命名"}</p>
@@ -914,7 +1026,7 @@ export default function AdminDashboard() {
             {activeTab === "bikes" && (
               <div className="bg-white rounded-2xl shadow-xl p-8">
                 <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-                  <Bike className="mr-3 text-emerald-500" />所有车辆
+                  <Truck className="mr-3 text-emerald-500" />所有车辆
                 </h2>
                 <div className="space-y-4">
                   {allBikes.map((bike: any) => (

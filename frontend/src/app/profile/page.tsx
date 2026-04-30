@@ -210,8 +210,8 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
-            <button
-              onClick={() => setShowMessages(!showMessages)}
+            <Link
+              href="/messages"
               className="relative flex items-center space-x-2 bg-emerald-500 text-white px-4 py-2 rounded-full hover:bg-emerald-600 transition"
             >
               <MessageSquare size={20} />
@@ -221,7 +221,7 @@ export default function ProfilePage() {
                   {unreadCount}
                 </span>
               )}
-            </button>
+            </Link>
           </div>
         </div>
 

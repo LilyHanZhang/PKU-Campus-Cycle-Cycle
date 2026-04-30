@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func, or_, and_
 from typing import List, Optional
 from uuid import UUID
+from datetime import datetime
 
 from ..database import get_db
 from ..models import Message, User
@@ -112,3 +114,162 @@ def mark_all_as_read(
     
     db.commit()
     return {"message": "已标记所有消息为已读"}
+
+@router.get("/conversations")
+def get_conversations(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """获取会话列表（按联系人分组，显示最后一条消息）"""
+    user_id = UUID(current_user["user_id"])
+    
+    # 获取所有与当前用户相关的消息（发送或接收）
+    messages = db.query(Message).filter(
+        or_(
+            Message.sender_id == user_id,
+            Message.receiver_id == user_id
+        )
+    ).order_by(Message.created_at.desc()).all()
+    
+    # 按联系人分组，每个联系人只保留最后一条消息
+    conversations = {}
+    for msg in messages:
+        # 确定对方用户 ID
+        other_user_id = msg.receiver_id if str(msg.sender_id) == str(user_id) else msg.sender_id
+        
+        if other_user_id not in conversations:
+            conversations[other_user_id] = {
+                "last_message": msg,
+                "unread_count": 0
+            }
+        
+        # 统计未读消息数量
+        if msg.receiver_id == user_id and not msg.is_read:
+            conversations[other_user_id]["unread_count"] += 1
+    
+    # 构建返回结果
+    result = []
+    for other_user_id, conv_data in conversations.items():
+        other_user = db.query(User).filter(User.id == other_user_id).first()
+        if other_user:
+            result.append({
+                "user_id": str(other_user.id),
+                "user_name": other_user.name or other_user.email,
+                "user_avatar_url": other_user.avatar_url,
+                "last_message": MessageResponse.model_validate(conv_data["last_message"]).model_dump(),
+                "unread_count": conv_data["unread_count"],
+                "last_message_time": conv_data["last_message"].created_at
+            })
+    
+    # 按最后一条消息时间排序
+    result.sort(key=lambda x: x["last_message_time"], reverse=True)
+    
+    return result
+
+@router.get("/conversation/{user_id}")
+def get_conversation_with_user(
+    user_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """获取与特定用户的所有消息"""
+    current_user_id = UUID(current_user["user_id"])
+    
+    messages = db.query(Message).filter(
+        and_(
+            or_(
+                and_(Message.sender_id == current_user_id, Message.receiver_id == user_id),
+                and_(Message.sender_id == user_id, Message.receiver_id == current_user_id)
+            )
+        )
+    ).order_by(Message.created_at.asc()).all()
+    
+    # 将所有收到的消息标记为已读
+    db.query(Message).filter(
+        Message.sender_id == user_id,
+        Message.receiver_id == current_user_id,
+        Message.is_read == False
+    ).update({"is_read": True})
+    db.commit()
+    
+    result = []
+    for msg in messages:
+        sender = db.query(User).filter(User.id == msg.sender_id).first()
+        result.append({
+            **MessageResponse.model_validate(msg).model_dump(),
+            "sender_name": sender.name if sender else None,
+            "sender_avatar_url": sender.avatar_url if sender else None
+        })
+    
+    return result
+
+@router.delete("/conversation/{user_id}")
+def delete_conversation_with_user(
+    user_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """删除与特定用户的所有消息"""
+    current_user_id = UUID(current_user["user_id"])
+    
+    # 删除所有与指定用户的消息（发送或接收）
+    db.query(Message).filter(
+        and_(
+            or_(
+                and_(Message.sender_id == current_user_id, Message.receiver_id == user_id),
+                and_(Message.sender_id == user_id, Message.receiver_id == current_user_id)
+            )
+        )
+    ).delete()
+    
+    db.commit()
+    return {"message": "对话已删除"}
+
+@router.get("/search")
+def search_messages(
+    q: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """搜索消息内容"""
+    current_user_id = UUID(current_user["user_id"])
+    
+    messages = db.query(Message).filter(
+        and_(
+            or_(
+                Message.sender_id == current_user_id,
+                Message.receiver_id == current_user_id
+            ),
+            Message.content.contains(q)
+        )
+    ).order_by(Message.created_at.desc()).limit(50).all()
+    
+    result = []
+    for msg in messages:
+        sender = db.query(User).filter(User.id == msg.sender_id).first()
+        result.append({
+            **MessageResponse.model_validate(msg).model_dump(),
+            "sender_name": sender.name if sender else None,
+            "sender_avatar_url": sender.avatar_url if sender else None
+        })
+    
+    return result
+
+@router.delete("/{message_id}")
+def delete_message(
+    message_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """删除单条消息"""
+    message = db.query(Message).filter(Message.id == message_id).first()
+    if not message:
+        raise HTTPException(status_code=404, detail="消息不存在")
+    
+    # 只能删除自己发送或接收的消息
+    if str(message.sender_id) != current_user["user_id"] and str(message.receiver_id) != current_user["user_id"]:
+        raise HTTPException(status_code=403, detail="无权限删除此消息")
+    
+    db.delete(message)
+    db.commit()
+    return {"message": "消息已删除"}

@@ -65,8 +65,12 @@ def get_my_messages(
 ):
     """获取我的私信（发送和接收的）"""
     user_id = UUID(current_user["user_id"])
+    # 获取发送给我的消息（包括系统消息 sender_id=None）和我发送的消息
     messages = db.query(Message).filter(
-        (Message.sender_id == user_id) | (Message.receiver_id == user_id)
+        or_(
+            Message.receiver_id == user_id,  # 我收到的消息（包括系统消息）
+            Message.sender_id == user_id     # 我发送的消息
+        )
     ).order_by(Message.created_at.desc()).limit(50).all()
     
     return messages
@@ -120,7 +124,21 @@ def mark_all_as_read(
     db.commit()
     return {"message": "已标记所有消息为已读"}
 
-@router.get("/conversations")
+@router.get("/all", response_model=List[MessageResponse])
+def get_all_messages(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """获取所有消息（包括系统消息，用于管理员查看系统通知）"""
+    user_id = UUID(current_user["user_id"])
+    # 获取发送给我的所有消息（包括系统消息 sender_id=None）
+    messages = db.query(Message).filter(
+        Message.receiver_id == user_id
+    ).order_by(Message.created_at.desc()).limit(50).all()
+    
+    return messages
+
+@router.get("/conversations", response_model=List[dict])
 def get_conversations(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -140,6 +158,10 @@ def get_conversations(
     conversations = {}
     for msg in messages:
         # 确定对方用户 ID
+        if msg.sender_id is None:
+            # 系统消息，没有"对方用户"，跳过
+            continue
+        
         other_user_id = msg.receiver_id if str(msg.sender_id) == str(user_id) else msg.sender_id
         
         if other_user_id not in conversations:

@@ -494,7 +494,7 @@ export default function MessagesPage() {
                         >
                           <div className={`flex items-end space-x-2 max-w-[70%] ${isMe ? 'flex-row-reverse space-x-reverse' : ''}`}>
                             {/* 头像 */}
-                            {!isMe && (
+                            {!isMe && msg.sender_id && (
                               <img
                                 src={msg.sender_avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.sender_name || 'User')}&background=8b5cf6&color=fff`}
                                 alt={msg.sender_name}
@@ -519,6 +519,8 @@ export default function MessagesPage() {
                                   className={`px-4 py-2.5 rounded-2xl shadow-sm ${
                                     isMe
                                       ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-br-md'
+                                      : msg.sender_id === null
+                                      ? 'bg-yellow-50 text-yellow-900 border border-yellow-200 rounded-bl-md'
                                       : 'bg-white text-gray-900 border border-gray-200 rounded-bl-md'
                                   }`}
                                 >

@@ -3,62 +3,29 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import { User, Bike, Calendar, Shield, Trash2 } from "lucide-react";
+import {
+  LayoutDashboard,
+  Truck,
+  Users,
+  Calendar,
+  History,
+  CheckCircle,
+  XCircle,
+  Clock,
+  TrendingUp,
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  Plus,
+  Search,
+  Bell,
+  Settings,
+  LogOut,
+  User as UserIcon
+} from "lucide-react";
 
 // 生产环境 API 地址
 const API_URL = "https://pku-campus-cycle-cycle.onrender.com";
-
-// Countdown Timer Component
-function CountdownTimer({ slot }: { slot: any }) {
-  const [timeLeft, setTimeLeft] = useState(slot.countdown_seconds);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev: number) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  const formatTime = (seconds: number) => {
-    const days = Math.floor(seconds / (3600 * 24));
-    const hours = Math.floor((seconds % (3600 * 24)) / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-
-    if (days > 0) {
-      return `${days}天 ${hours}小时 ${minutes}分钟`;
-    } else if (hours > 0) {
-      return `${hours}小时 ${minutes}分钟 ${secs}秒`;
-    } else if (minutes > 0) {
-      return `${minutes}分钟 ${secs}秒`;
-    } else {
-      return `${secs}秒`;
-    }
-  };
-
-  const isUrgent = timeLeft < 3600; // Less than 1 hour
-
-  return (
-    <div className={`p-4 rounded-lg border-2 ${isUrgent ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
-      <div className="flex justify-between items-center">
-        <div>
-          <p className="font-bold text-gray-800">时间段：{new Date(slot.start_time).toLocaleString()}</p>
-          <p className="text-sm text-gray-500">类型：{slot.appointment_type === 'pick-up' ? '取车' : '还车'}</p>
-        </div>
-        <div className={`text-2xl font-bold ${isUrgent ? 'text-red-600' : 'text-emerald-600'}`}>
-          {timeLeft > 0 ? formatTime(timeLeft) : '已过期'}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function AdminDashboard() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
@@ -70,29 +37,27 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
+  // 权限检查
   useEffect(() => {
-    console.log('Auth state:', { authLoading, isAuthenticated, user });
     if (!authLoading) {
       if (!user) {
-        console.log('No user, redirecting to login');
         window.location.href = "/login";
         return;
       }
       if (user.role === "USER") {
-        console.log('User role is USER, redirecting');
         alert("您没有权限访问此页面");
         window.location.href = "/";
         return;
       }
-      // 管理员权限，继续加载
-      console.log('Admin user detected:', user.role);
     }
   }, [authLoading, isAuthenticated, user]);
 
+  // 加载数据
   useEffect(() => {
     if (user && (user.role === "ADMIN" || user.role === "SUPER_ADMIN")) {
-      console.log('Fetching data for admin user');
       fetchData();
     }
   }, [user]);
@@ -102,7 +67,6 @@ export default function AdminDashboard() {
     const headers = { Authorization: `Bearer ${token}` };
 
     try {
-      console.log('Fetching admin dashboard data...');
       const [pendingRes, usersRes, bikesRes, appointmentsRes, dashboardRes] = await Promise.all([
         axios.get(`${API_URL}/bicycles/?status=PENDING_APPROVAL`, { headers }),
         axios.get(`${API_URL}/users/`, { headers }),
@@ -110,491 +74,313 @@ export default function AdminDashboard() {
         axios.get(`${API_URL}/appointments/`, { headers }),
         axios.get(`${API_URL}/bicycles/admin/dashboard`, { headers }),
       ]);
-      console.log('Dashboard data loaded:', {
-        pending: pendingRes.data.length,
-        users: usersRes.data.length,
-        bikes: bikesRes.data.length,
-        appointments: appointmentsRes.data.length,
-        dashboard: dashboardRes.data
-      });
+      
       setPendingBikes(pendingRes.data);
       setAllUsers(usersRes.data);
       setAllBikes(bikesRes.data);
-      // 只显示 PENDING 和 CONFIRMED 状态的预约
       const activeAppointments = appointmentsRes.data.filter((apt: any) => 
         apt.status === 'PENDING' || apt.status === 'CONFIRMED'
       );
       setAllAppointments(activeAppointments);
       setDashboardData(dashboardRes.data);
     } catch (err: any) {
-      console.error("Failed to fetch data", err);
-      console.error("Error response:", err.response?.data);
       setError(`获取数据失败：${err.response?.data?.detail || err.message || "未知错误"}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleProposeTimeSlots = async (bikeId: string) => {
-    const token = localStorage.getItem("access_token");
-    
-    // 创建多个时间段输入框
-    const tempDiv = document.createElement('div');
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const minDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
-    
-    tempDiv.innerHTML = `
-      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 9999; max-height: 80vh; overflow-y: auto; min-width: 550px;">
-        <h3 style="margin-bottom: 15px; font-size: 20px; font-weight: bold; color: #1f2937;">为卖家提出时间段</h3>
-        <p style="margin-bottom: 15px; color: #6b7280; font-size: 14px; line-height: 1.6;">
-          <strong>使用说明：</strong><br/>
-          1. 点击日期时间输入框，会弹出日期选择器<br/>
-          2. 选择日期后，在时间部分可以直接点击小时或分钟数字进行选择<br/>
-          3. 也可以直接在输入框中手动输入时间（格式：YYYY-MM-DD HH:MM）<br/>
-          4. 请至少提出 1 个时间段（可添加多个）
-        </p>
-        <div id="slotsContainer" style="max-height: 350px; overflow-y: auto; margin-bottom: 15px;"></div>
-        <button id="addSlotBtn" style="width: 100%; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: 600;">+ 添加时间段</button>
-        <div style="display: flex; gap: 10px;">
-          <button id="submitBtn" style="flex: 1; padding: 12px; background: #2ab26a; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">提交</button>
-          <button id="cancelBtn" style="flex: 1; padding: 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">取消</button>
-        </div>
-      </div>
-      <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9998;"></div>
-    `;
-    document.body.appendChild(tempDiv);
-
-    const slotsContainer = document.getElementById('slotsContainer')!;
-    let slotCount = 0;
-
-    const addSlotInput = () => {
-      slotCount++;
-      const slotDiv = document.createElement('div');
-      slotDiv.className = 'slot-input';
-      slotDiv.style.cssText = 'margin-bottom: 12px; padding: 12px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;';
-      slotDiv.innerHTML = `
-        <div style="display: flex; gap: 12px; align-items: center;">
-          <div style="flex: 1;">
-            <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">开始时间</label>
-            <input type="datetime-local" class="startTime" min="${minDateTime}" step="60" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
-          </div>
-          <div style="flex: 1;">
-            <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">结束时间</label>
-            <input type="datetime-local" class="endTime" min="${minDateTime}" step="60" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
-          </div>
-          ${slotCount > 1 ? '<button class="removeSlot" style="padding: 8px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold;">×</button>' : ''}
-        </div>
-      `;
-      slotsContainer.appendChild(slotDiv);
-
-      // 移除按钮事件
-      const removeBtn = slotDiv.querySelector('.removeSlot');
-      if (removeBtn) {
-        removeBtn.addEventListener('click', () => {
-          if (slotsContainer.children.length > 1) {
-            slotsContainer.removeChild(slotDiv);
-          } else {
-            alert("至少需要一个时间段");
-          }
-        });
-      }
-    };
-
-    // 添加第一个时间段
-    addSlotInput();
-
-    const addSlotBtn = document.getElementById('addSlotBtn');
-    addSlotBtn?.addEventListener('click', addSlotInput);
-
-    const cancelBtn = document.getElementById('cancelBtn');
-    const submitBtn = document.getElementById('submitBtn');
-    
-    const cleanup = () => {
-      document.body.removeChild(tempDiv);
-    };
-
-    cancelBtn?.addEventListener('click', cleanup);
-
-    submitBtn?.addEventListener('click', async () => {
-      const startTimeInputs = document.querySelectorAll('.startTime') as NodeListOf<HTMLInputElement>;
-      const endTimeInputs = document.querySelectorAll('.endTime') as NodeListOf<HTMLInputElement>;
-      
-      const timeSlots = [];
-      let hasError = false;
-      
-      for (let i = 0; i < startTimeInputs.length; i++) {
-        const startTime = startTimeInputs[i].value.trim();
-        const endTime = endTimeInputs[i].value.trim();
-        
-        console.log(`Slot ${i}: start="${startTime}", end="${endTime}"`);
-        
-        // 检查是否为空
-        if (!startTime || !endTime) {
-          alert("请填写所有时间段");
-          hasError = true;
-          break;
-        }
-        
-        // 验证时间格式 - datetime-local 返回 "YYYY-MM-DDTHH:mm" 格式
-        const start = new Date(startTime);
-        const end = new Date(endTime);
-        
-        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-          alert("时间格式不正确，请重新选择时间");
-          hasError = true;
-          break;
-        }
-        
-        if (start >= end) {
-          alert("开始时间必须早于结束时间");
-          hasError = true;
-          break;
-        }
-        
-        // 验证时间不是过去的时间
-        if (start < new Date()) {
-          alert("开始时间不能是过去的时间");
-          hasError = true;
-          break;
-        }
-        
-        timeSlots.push({
-          start_time: start.toISOString(),
-          end_time: end.toISOString()
-        });
-      }
-      
-      if (hasError || timeSlots.length === 0) {
-        console.log("Validation failed:", { hasError, timeSlots: timeSlots.length });
-        return;
-      }
-
-      try {
-        await axios.post(
-          `${API_URL}/bicycles/${bikeId}/propose-slots`,
-          timeSlots,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        alert(`✓ 已提出 ${timeSlots.length} 个时间段，等待卖家选择！`);
-        cleanup();
-        fetchData();
-      } catch (err: any) {
-        console.error("Failed to propose time slots", err);
-        alert(`操作失败：${err.response?.data?.detail || "请重试"}`);
-      }
-    });
-  };
-
+  // 处理审核通过
   const handleApprove = async (bikeId: string) => {
-    // 买家场景：直接批准上架
     const token = localStorage.getItem("access_token");
     try {
       await axios.put(`${API_URL}/bicycles/${bikeId}/approve`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      alert("车辆已批准上架！");
+      alert("✓ 车辆已批准上架！");
       fetchData();
     } catch (err) {
-      console.error("Failed to approve bike", err);
       alert("操作失败，请重试。");
     }
   };
 
+  // 处理审核拒绝
   const handleReject = async (bikeId: string) => {
     const token = localStorage.getItem("access_token");
     try {
       await axios.put(`${API_URL}/bicycles/${bikeId}/reject`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      alert("已拒绝并删除");
+      alert("✓ 已拒绝并删除");
       fetchData();
     } catch (err) {
-      console.error("Failed to reject bike", err);
       alert("操作失败，请重试。");
     }
   };
 
-  const handleUpdateRole = async (userId: string, newRole: string) => {
-    const token = localStorage.getItem("access_token");
-    try {
-      await axios.put(
-        `${API_URL}/users/${userId}/role`,
-        { role: newRole },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert("角色更新成功！");
-      fetchData();
-    } catch (err) {
-      console.error("Failed to update role", err);
-      alert("操作失败，只有主负责人可以修改管理员权限。");
-    }
-  };
+  // 过滤数据
+  const filteredUsers = allUsers.filter((user: any) =>
+    user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  const handleProposeAppointmentSlots = async (aptId: string) => {
-    const token = localStorage.getItem("access_token");
-    
-    console.log("=== 提出时间段调试信息 ===");
-    console.log("预约 ID:", aptId);
-    console.log("预约 ID 类型:", typeof aptId);
-    console.log("预约 ID 长度:", aptId.length);
-    console.log("API URL:", `${API_URL}/appointments/${aptId}/propose-slots`);
-    
-    // 创建多个时间段输入框
-    const tempDiv = document.createElement('div');
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const minDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
-    
-    tempDiv.innerHTML = `
-      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 9999; max-height: 80vh; overflow-y: auto; min-width: 550px;">
-        <h3 style="margin-bottom: 15px; font-size: 20px; font-weight: bold; color: #1f2937;">为买家预约提出时间段</h3>
-        <p style="margin-bottom: 15px; color: #6b7280; font-size: 14px; line-height: 1.6;">
-          <strong>使用说明：</strong><br/>
-          1. 点击日期时间输入框，会弹出日期选择器<br/>
-          2. 选择日期后，在时间部分可以直接点击小时或分钟数字进行选择<br/>
-          3. 也可以直接在输入框中手动输入时间（格式：YYYY-MM-DD HH:MM）<br/>
-          4. 请至少提出 1 个时间段（可添加多个）
-        </p>
-        <div id="slotsContainer" style="max-height: 350px; overflow-y: auto; margin-bottom: 15px;"></div>
-        <button id="addSlotBtn" style="width: 100%; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: 600;">+ 添加时间段</button>
-        <div style="display: flex; gap: 10px;">
-          <button id="submitBtn" style="flex: 1; padding: 12px; background: #2ab26a; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">提交</button>
-          <button id="cancelBtn" style="flex: 1; padding: 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">取消</button>
+  const filteredBikes = allBikes.filter((bike: any) =>
+    bike.brand?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    bike.model?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredAppointments = allAppointments.filter((apt: any) =>
+    apt.bicycle?.brand?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // 渲染统计卡片
+  const renderStatCard = (title: string, value: number, icon: any, color: string, trend?: string) => (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
+          <p className="text-3xl font-bold text-gray-900">{value}</p>
+          {trend && (
+            <div className="flex items-center mt-2">
+              <TrendingUp size={16} className="text-green-500 mr-1" />
+              <span className="text-xs font-medium text-green-600">{trend}</span>
+            </div>
+          )}
+        </div>
+        <div className={`p-4 rounded-xl ${color}`}>
+          {icon}
         </div>
       </div>
-      <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9998;"></div>
-    `;
-    document.body.appendChild(tempDiv);
+    </div>
+  );
 
-    const slotsContainer = document.getElementById('slotsContainer')!;
-    let slotCount = 0;
-
-    const addSlotInput = () => {
-      slotCount++;
-      const slotDiv = document.createElement('div');
-      slotDiv.className = 'slot-input';
-      slotDiv.style.cssText = 'margin-bottom: 12px; padding: 12px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;';
-      slotDiv.innerHTML = `
-        <div style="display: flex; gap: 12px; align-items: center;">
-          <div style="flex: 1;">
-            <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">开始时间</label>
-            <input type="datetime-local" class="startTime" min="${minDateTime}" step="60" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
-          </div>
-          <div style="flex: 1;">
-            <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">结束时间</label>
-            <input type="datetime-local" class="endTime" min="${minDateTime}" step="60" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
-          </div>
-          ${slotCount > 1 ? '<button class="removeSlot" style="padding: 8px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold;">×</button>' : ''}
+  // 渲染待审核列表
+  const renderPendingBikes = () => (
+    <div className="space-y-4">
+      {pendingBikes.length === 0 ? (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+          <CheckCircle size={48} className="mx-auto text-green-500 mb-4" />
+          <p className="text-gray-600 font-medium">没有待审核的车辆</p>
+          <p className="text-sm text-gray-400 mt-2">所有车辆都已审核完毕</p>
         </div>
-      `;
-      slotsContainer.appendChild(slotDiv);
+      ) : (
+        pendingBikes.map((bike: any) => (
+          <div key={bike.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start space-x-4 flex-1">
+                {bike.image_url ? (
+                  <img src={bike.image_url} alt={bike.brand} className="w-24 h-24 rounded-xl object-cover" />
+                ) : (
+                  <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center">
+                    <Truck size={32} className="text-blue-600" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">
+                    {bike.brand} {bike.model}
+                  </h3>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                    <div className="flex items-center text-gray-600">
+                      <span className="w-20 text-gray-400">颜色:</span>
+                      <span className="font-medium">{bike.color}</span>
+                    </div>
+                    <div className="flex items-center text-gray-600">
+                      <span className="w-20 text-gray-400">价格:</span>
+                      <span className="font-medium">¥{bike.price}</span>
+                    </div>
+                    <div className="flex items-center text-gray-600">
+                      <span className="w-20 text-gray-400">车况:</span>
+                      <span className="font-medium">{bike.condition}/10</span>
+                    </div>
+                    <div className="flex items-center text-gray-600">
+                      <span className="w-20 text-gray-400">时间:</span>
+                      <span className="font-medium">{new Date(bike.created_at).toLocaleDateString('zh-CN')}</span>
+                    </div>
+                  </div>
+                  {bike.description && (
+                    <p className="text-sm text-gray-500 mt-3 line-clamp-2">{bike.description}</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-col space-y-2 ml-4">
+                <button
+                  onClick={() => handleApprove(bike.id)}
+                  className="flex items-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium text-sm"
+                >
+                  <CheckCircle size={16} className="mr-1" />
+                  通过
+                </button>
+                <button
+                  onClick={() => handleReject(bike.id)}
+                  className="flex items-center px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-medium text-sm"
+                >
+                  <XCircle size={16} className="mr-1" />
+                  拒绝
+                </button>
+              </div>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
 
-      const removeBtn = slotDiv.querySelector('.removeSlot');
-      if (removeBtn) {
-        removeBtn.addEventListener('click', () => {
-          if (slotsContainer.children.length > 1) {
-            slotsContainer.removeChild(slotDiv);
-          } else {
-            alert("至少需要一个时间段");
-          }
-        });
-      }
-    };
+  // 渲染用户列表
+  const renderUsers = () => (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-gray-50 border-b border-gray-100">
+            <tr>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">用户</th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">邮箱</th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">角色</th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">注册时间</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {filteredUsers.map((userItem: any) => (
+              <tr key={userItem.id} className="hover:bg-gray-50 transition-colors">
+                <td className="px-6 py-4">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                      {userItem.name?.charAt(0).toUpperCase() || userItem.email.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="ml-3 font-medium text-gray-900">{userItem.name || '未设置昵称'}</span>
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-600">{userItem.email}</td>
+                <td className="px-6 py-4">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    userItem.role === 'SUPER_ADMIN' ? 'bg-purple-100 text-purple-700' :
+                    userItem.role === 'ADMIN' ? 'bg-blue-100 text-blue-700' :
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {userItem.role === 'SUPER_ADMIN' ? '主负责人' :
+                     userItem.role === 'ADMIN' ? '管理员' : '普通用户'}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-500">
+                  {new Date(userItem.created_at).toLocaleDateString('zh-CN')}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 
-    addSlotInput();
+  // 渲染车辆列表
+  const renderBikes = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {filteredBikes.map((bike: any) => (
+        <div key={bike.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all">
+          {bike.image_url ? (
+            <img src={bike.image_url} alt={bike.brand} className="w-full h-48 object-cover" />
+          ) : (
+            <div className="w-full h-48 bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+              <Truck size={64} className="text-blue-600" />
+            </div>
+          )}
+          <div className="p-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">{bike.brand} {bike.model}</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">颜色</span>
+                <span className="font-medium text-gray-900">{bike.color}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">价格</span>
+                <span className="font-medium text-green-600">¥{bike.price}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">车况</span>
+                <span className="font-medium text-gray-900">{bike.condition}/10</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">状态</span>
+                <span className={`font-medium ${
+                  bike.status === 'AVAILABLE' ? 'text-green-600' :
+                  bike.status === 'PENDING_APPROVAL' ? 'text-yellow-600' :
+                  'text-gray-600'
+                }`}>
+                  {bike.status === 'AVAILABLE' ? '可售' :
+                   bike.status === 'PENDING_APPROVAL' ? '待审核' :
+                   bike.status === 'SOLD' ? '已售' : '其他'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
-    const addSlotBtn = document.getElementById('addSlotBtn');
-    addSlotBtn?.addEventListener('click', addSlotInput);
+  // 渲染预约列表
+  const renderAppointments = () => (
+    <div className="space-y-4">
+      {filteredAppointments.map((apt: any) => (
+        <div key={apt.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start space-x-4 flex-1">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                <Calendar size={24} className="text-white" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center space-x-2 mb-2">
+                  <h3 className="text-lg font-bold text-gray-900">
+                    {apt.bicycle?.brand} {apt.bicycle?.model}
+                  </h3>
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    apt.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-green-100 text-green-700'
+                  }`}>
+                    {apt.status === 'PENDING' ? '待确认' : '已确认'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                  <div className="flex items-center text-gray-600">
+                    <span className="w-20 text-gray-400">类型:</span>
+                    <span className="font-medium">{apt.type === 'buyer' ? '买家取车' : '卖家还车'}</span>
+                  </div>
+                  <div className="flex items-center text-gray-600">
+                    <span className="w-20 text-gray-400">用户:</span>
+                    <span className="font-medium">{apt.user_name || '未知'}</span>
+                  </div>
+                  <div className="flex items-center text-gray-600">
+                    <span className="w-20 text-gray-400">时间:</span>
+                    <span className="font-medium">{new Date(apt.created_at).toLocaleDateString('zh-CN')}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
-    const cancelBtn = document.getElementById('cancelBtn');
-    const submitBtn = document.getElementById('submitBtn');
-    
-    const cleanup = () => {
-      document.body.removeChild(tempDiv);
-    };
-
-    cancelBtn?.addEventListener('click', cleanup);
-
-    submitBtn?.addEventListener('click', async () => {
-      const startTimeInputs = document.querySelectorAll('.startTime') as NodeListOf<HTMLInputElement>;
-      const endTimeInputs = document.querySelectorAll('.endTime') as NodeListOf<HTMLInputElement>;
-      
-      const timeSlots = [];
-      let hasError = false;
-      
-      for (let i = 0; i < startTimeInputs.length; i++) {
-        const startTime = startTimeInputs[i].value.trim();
-        const endTime = endTimeInputs[i].value.trim();
-        
-        console.log(`Slot ${i}: start="${startTime}", end="${endTime}"`);
-        
-        // 检查是否为空
-        if (!startTime || !endTime) {
-          alert("请填写所有时间段");
-          hasError = true;
-          break;
-        }
-        
-        // 验证时间格式 - datetime-local 返回 "YYYY-MM-DDTHH:mm" 格式
-        const start = new Date(startTime);
-        const end = new Date(endTime);
-        
-        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-          alert("时间格式不正确，请重新选择时间");
-          hasError = true;
-          break;
-        }
-        
-        if (start >= end) {
-          alert("开始时间必须早于结束时间");
-          hasError = true;
-          break;
-        }
-        
-        // 验证时间不是过去的时间
-        if (start < new Date()) {
-          alert("开始时间不能是过去的时间");
-          hasError = true;
-          break;
-        }
-        
-        timeSlots.push({
-          start_time: start.toISOString(),
-          end_time: end.toISOString()
-        });
-      }
-      
-      if (hasError || timeSlots.length === 0) {
-        console.log("Validation failed:", { hasError, timeSlots: timeSlots.length });
-        return;
-      }
-
-      try {
-        console.log("发送请求...");
-        await axios.post(
-          `${API_URL}/appointments/${aptId}/propose-slots`,
-          timeSlots,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        console.log("请求成功！");
-        alert(`✓ 已提出 ${timeSlots.length} 个时间段，等待买家选择！`);
-        cleanup();
-        fetchData();
-      } catch (err: any) {
-        console.error("请求失败:", err);
-        console.error("错误响应:", err.response?.data);
-        console.error("错误状态码:", err.response?.status);
-        alert(`操作失败：${err.response?.data?.detail || "请重试"}`);
-      }
-    });
-  };
-
-  const handleConfirmTimeSlot = async (aptId: string) => {
-    const token = localStorage.getItem("access_token");
-    try {
-      await axios.put(
-        `${API_URL}/time_slots/confirm/${aptId}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert("已确认时间段！");
-      fetchData();
-    } catch (err) {
-      console.error("Failed to confirm time slot", err);
-      alert("操作失败，请重试。");
-    }
-  };
-
-  const handleConfirmPickup = async (aptId: string) => {
-    const token = localStorage.getItem("access_token");
-    try {
-      await axios.put(
-        `${API_URL}/time_slots/confirm-pickup/${aptId}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert("已确认提车！");
-      fetchData();
-    } catch (err) {
-      console.error("Failed to confirm pickup", err);
-      alert("操作失败，请重试。");
-    }
-  };
-
-  const handleConfirmBicycle = async (bikeId: string) => {
-    const token = localStorage.getItem("access_token");
-    try {
-      await axios.post(
-        `${API_URL}/bicycles/${bikeId}/confirm`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert("已确认自行车交易！");
-      fetchData();
-    } catch (err) {
-      console.error("Failed to confirm bicycle", err);
-      alert("操作失败，请重试。");
-    }
-  };
-
-  const handleStoreInInventory = async (bikeId: string) => {
-    const token = localStorage.getItem("access_token");
-    try {
-      await axios.put(
-        `${API_URL}/bicycles/${bikeId}/store-inventory`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert("自行车已存入库存！");
-      fetchData();
-    } catch (err) {
-      console.error("Failed to store bicycle", err);
-      alert("操作失败，请重试。");
-    }
-  };
-
-  // 显示加载状态
-  if (authLoading) {
+  // 加载状态
+  if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">正在加载管理后台...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">正在加载管理后台...</p>
         </div>
       </div>
     );
   }
 
-  // 用户未登录
-  if (!user) {
+  // 未登录或无权限
+  if (!user || user.role === "USER") {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600 mb-4">请先登录</p>
-          <Link href="/login" className="text-green-600 font-bold hover:underline">
-            前往登录
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  // 用户没有权限
-  if (user.role === "USER") {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">您没有权限访问此页面</p>
-          <Link href="/" className="text-green-600 font-bold hover:underline">
+          <AlertCircle size={64} className="mx-auto text-red-500 mb-4" />
+          <p className="text-red-600 font-medium mb-4">您没有权限访问此页面</p>
+          <Link href="/" className="text-blue-600 font-medium hover:underline">
             返回首页
           </Link>
         </div>
@@ -603,424 +389,300 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen p-8 relative overflow-hidden"
-         style={{
-           backgroundImage: `url('https://images.unsplash.com/photo-1517504868000-42037c71215e?q=80&w=2070&auto=format&fit=crop')`,
-           backgroundSize: 'cover',
-           backgroundPosition: 'center',
-           backgroundAttachment: 'fixed'
-         }}>
-      {/* Overlay for better readability */}
-      <div className="absolute inset-0 bg-gray-100/95 backdrop-blur-sm"></div>
-      
-      {/* Content */}
-      <div className="relative z-10 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-4xl font-extrabold text-gray-800">管理后台</h1>
-            <span className={`text-sm font-bold px-3 py-1 rounded-full ${
-              user.role === "SUPER_ADMIN" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
-            }`}>
-              {user.role === "SUPER_ADMIN" ? "主负责人" : "管理员"}
-            </span>
-          </div>
-          <Link href="/" className="text-gray-600 font-bold hover:underline">返回首页</Link>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
+      {/* 顶部导航栏 */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo 和标题 */}
+            <div className="flex items-center space-x-4">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
+                <LayoutDashboard size={20} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">管理后台</h1>
+                <p className="text-xs text-gray-500">燕园易骑</p>
+              </div>
+            </div>
 
+            {/* 导航标签 */}
+            <nav className="hidden md:flex items-center space-x-1">
+              {[
+                { id: 'dashboard', label: '仪表盘', icon: LayoutDashboard },
+                { id: 'pending', label: '待审核', icon: CheckCircle },
+                { id: 'users', label: '用户', icon: Users },
+                { id: 'bikes', label: '车辆', icon: Truck },
+                { id: 'appointments', label: '预约', icon: Calendar },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                    activeTab === tab.id
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <tab.icon size={16} className="mr-2" />
+                  {tab.label}
+                  {tab.id === 'pending' && pendingBikes.length > 0 && (
+                    <span className="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
+                      {pendingBikes.length}
+                    </span>
+                  )}
+                </button>
+              ))}
+              <Link href="/history">
+                <button className="flex items-center px-4 py-2 rounded-lg font-medium text-sm text-gray-600 hover:bg-gray-50 transition-all">
+                  <History size={16} className="mr-2" />
+                  历史记录
+                </button>
+              </Link>
+            </nav>
+
+            {/* 右侧用户菜单 */}
+            <div className="flex items-center space-x-3">
+              <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all relative">
+                <Bell size={20} />
+                {dashboardData?.pending_bicycles_count > 0 && (
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                )}
+              </button>
+              
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-all"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                    {user.name?.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase()}
+                  </div>
+                  <ChevronDown size={16} className={`text-gray-600 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
+                    <div className="px-4 py-2 border-b border-gray-100">
+                      <p className="text-sm font-medium text-gray-900">{user.name || '管理员'}</p>
+                      <p className="text-xs text-gray-500">{user.email}</p>
+                    </div>
+                    <div className="px-4 py-2">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        user.role === 'SUPER_ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                      }`}>
+                        {user.role === 'SUPER_ADMIN' ? '主负责人' : '管理员'}
+                      </span>
+                    </div>
+                    <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center">
+                      <Settings size={16} className="mr-2" />
+                      设置
+                    </button>
+                    <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center">
+                      <LogOut size={16} className="mr-2" />
+                      退出
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* 主内容区 */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* 错误提示 */}
         {error && (
-          <div className="bg-red-100 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4">
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl mb-6 flex items-center">
+            <AlertCircle size={20} className="mr-2" />
             {error}
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="flex space-x-4 mb-6 bg-white rounded-xl p-2 shadow-lg">
-          <button
-            onClick={() => setActiveTab("dashboard")}
-            className={`flex-1 py-3 px-6 rounded-lg font-bold transition ${
-              activeTab === "dashboard" ? "bg-[#2ab26a] text-white" : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            仪表盘 ({dashboardData?.pending_bicycles_count || 0})
-          </button>
-          <button
-            onClick={() => setActiveTab("pending")}
-            className={`flex-1 py-3 px-6 rounded-lg font-bold transition ${
-              activeTab === "pending" ? "bg-[#2ab26a] text-white" : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            待审核车辆 ({pendingBikes.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("users")}
-            className={`flex-1 py-3 px-6 rounded-lg font-bold transition ${
-              activeTab === "users" ? "bg-[#2ab26a] text-white" : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            用户管理 ({allUsers.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("bikes")}
-            className={`flex-1 py-3 px-6 rounded-lg font-bold transition ${
-              activeTab === "bikes" ? "bg-[#2ab26a] text-white" : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            车辆管理 ({allBikes.length})
-          </button>
-          <button
-              onClick={() => setActiveTab("appointments")}
-              className={`flex-1 py-3 px-6 rounded-lg font-bold transition ${
-                activeTab === "appointments" ? "bg-[#2ab26a] text-white" : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              预约管理 ({allAppointments.length})
-            </button>
-            <Link href="/history">
-              <button className="flex-1 py-3 px-6 rounded-lg font-bold transition bg-purple-100 text-purple-700 hover:bg-purple-200">
-                📋 历史记录
-              </button>
-            </Link>
-          </div>
+        {/* 仪表盘 */}
+        {activeTab === 'dashboard' && dashboardData && (
+          <div className="space-y-6">
+            {/* 统计卡片 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {renderStatCard(
+                '待处理自行车登记',
+                dashboardData.pending_bicycles_count,
+                <Truck size={24} className="text-white" />,
+                'bg-gradient-to-br from-blue-500 to-blue-600',
+                '+12%'
+              )}
+              {renderStatCard(
+                '等待确认预约',
+                dashboardData.pending_appointments_count,
+                <Clock size={24} className="text-white" />,
+                'bg-gradient-to-br from-purple-500 to-purple-600',
+                '+5%'
+              )}
+              {renderStatCard(
+                '总用户数',
+                allUsers.length,
+                <Users size={24} className="text-white" />,
+                'bg-gradient-to-br from-green-500 to-green-600',
+                '+24%'
+              )}
+              {renderStatCard(
+                '总车辆数',
+                allBikes.length,
+                <Truck size={24} className="text-white" />,
+                'bg-gradient-to-br from-orange-500 to-orange-600',
+                '+18%'
+              )}
+            </div>
 
-        {loading ? (
-          <p className="text-center py-10">加载中...</p>
-        ) : (
-          <>
-            {/* Dashboard Tab */}
-            {activeTab === "dashboard" && dashboardData && (
-              <div className="space-y-6">
-                {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl shadow-xl p-6">
-                    <h3 className="text-lg font-bold mb-2">待处理自行车登记</h3>
-                    <p className="text-4xl font-extrabold">{dashboardData.pending_bicycles_count}</p>
-                  </div>
-                  <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-2xl shadow-xl p-6">
-                    <h3 className="text-lg font-bold mb-2">等待确认预约</h3>
-                    <p className="text-4xl font-extrabold">{dashboardData.pending_appointments_count}</p>
-                  </div>
-                  <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white rounded-2xl shadow-xl p-6">
-                    <h3 className="text-lg font-bold mb-2">等待确认自行车</h3>
-                    <p className="text-4xl font-extrabold">{dashboardData.waiting_bicycles ? dashboardData.waiting_bicycles.length : 0}</p>
-                  </div>
-                  <div className="bg-gradient-to-br from-orange-500 to-orange-600 text-white rounded-2xl shadow-xl p-6">
-                    <h3 className="text-lg font-bold mb-2">已锁定时间段</h3>
-                    <p className="text-4xl font-extrabold">{dashboardData.locked_slots_with_countdown.length}</p>
-                  </div>
+            {/* 快捷操作 */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">快捷操作</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <button
+                  onClick={() => setActiveTab('pending')}
+                  className="flex flex-col items-center p-4 rounded-xl bg-blue-50 hover:bg-blue-100 transition-colors"
+                >
+                  <CheckCircle size={32} className="text-blue-600 mb-2" />
+                  <span className="text-sm font-medium text-gray-900">审核车辆</span>
+                  <span className="text-xs text-gray-500 mt-1">{pendingBikes.length} 辆待审核</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('appointments')}
+                  className="flex flex-col items-center p-4 rounded-xl bg-purple-50 hover:bg-purple-100 transition-colors"
+                >
+                  <Calendar size={32} className="text-purple-600 mb-2" />
+                  <span className="text-sm font-medium text-gray-900">管理预约</span>
+                  <span className="text-xs text-gray-500 mt-1">{allAppointments.length} 个进行中</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('users')}
+                  className="flex flex-col items-center p-4 rounded-xl bg-green-50 hover:bg-green-100 transition-colors"
+                >
+                  <Users size={32} className="text-green-600 mb-2" />
+                  <span className="text-sm font-medium text-gray-900">用户管理</span>
+                  <span className="text-xs text-gray-500 mt-1">{allUsers.length} 位用户</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('bikes')}
+                  className="flex flex-col items-center p-4 rounded-xl bg-orange-50 hover:bg-orange-100 transition-colors"
+                >
+                  <Truck size={32} className="text-orange-600 mb-2" />
+                  <span className="text-sm font-medium text-gray-900">车辆管理</span>
+                  <span className="text-xs text-gray-500 mt-1">{allBikes.length} 辆车</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 待审核车辆预览 */}
+            {pendingBikes.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-gray-900">待审核车辆</h2>
+                  <button
+                    onClick={() => setActiveTab('pending')}
+                    className="text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center"
+                  >
+                    查看全部
+                    <ChevronDown size={16} className="ml-1 rotate-[-90deg]" />
+                  </button>
                 </div>
-
-                {/* Countdown Timer */}
-                {dashboardData.locked_slots_with_countdown.length > 0 && (
-                  <div className="bg-white rounded-2xl shadow-xl p-6">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-4">⏰ 即将到期的时间段</h2>
-                    <div className="space-y-4">
-                      {dashboardData.locked_slots_with_countdown.map((slot: any) => (
-                        <CountdownTimer key={slot.id} slot={slot} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Pending Bicycles List */}
-                {dashboardData.pending_bicycles.length > 0 && (
-                  <div className="bg-white rounded-2xl shadow-xl p-6">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-4">待处理自行车登记</h2>
-                    <div className="space-y-3">
-                      {dashboardData.pending_bicycles.map((bike: any) => (
-                        <div key={bike.id} className="p-4 bg-gray-50 rounded-lg flex justify-between items-center">
-                          <div>
-                            <p className="font-bold text-gray-800">{bike.brand}</p>
-                            <p className="text-sm text-gray-500">ID: {bike.id.slice(0, 8)}...</p>
-                          </div>
-                          <button
-                            onClick={() => setActiveTab("pending")}
-                            className="px-4 py-2 bg-[#2ab26a] text-white rounded-lg hover:bg-[#249a5c]"
-                          >
-                            处理
-                          </button>
+                <div className="space-y-3">
+                  {pendingBikes.slice(0, 3).map((bike: any) => (
+                    <div key={bike.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+                          <Truck size={24} className="text-blue-600" />
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Pending Appointments List */}
-                {dashboardData.waiting_appointments && dashboardData.waiting_appointments.length > 0 && (
-                  <div className="bg-white rounded-2xl shadow-xl p-6">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-4">⏳ 等待确认的预约（买家已选时间段）</h2>
-                    <div className="space-y-3">
-                      {dashboardData.waiting_appointments.map((apt: any) => (
-                        <div key={apt.id} className="p-4 bg-gray-50 rounded-lg flex justify-between items-center">
-                          <div>
-                            <p className="font-bold text-gray-800">预约 ID: {apt.id.slice(0, 8)}...</p>
-                            <p className="text-sm text-gray-500">用户：{apt.username} | 车辆：{apt.bicycle_brand}</p>
-                            <p className="text-sm text-gray-500">类型：{apt.type === 'pick-up' ? '取车' : '还车'}</p>
-                            <p className="text-sm text-gray-500">时间段 ID: {apt.time_slot_id?.slice(0, 8)}...</p>
-                          </div>
-                          <button
-                            onClick={() => handleConfirmTimeSlot(apt.id)}
-                            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-bold"
-                          >
-                            ✓ 确认时间段
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Waiting Bicycles List */}
-                {dashboardData.waiting_bicycles && dashboardData.waiting_bicycles.length > 0 && (
-                  <div className="bg-white rounded-2xl shadow-xl p-6">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-4">⏳ 等待确认的自行车（卖家已选时间段）</h2>
-                    <div className="space-y-3">
-                      {dashboardData.waiting_bicycles.map((bike: any) => (
-                        <div key={bike.id} className="p-4 bg-gray-50 rounded-lg flex justify-between items-center">
-                          <div>
-                            <p className="font-bold text-gray-800">车辆：{bike.brand}</p>
-                            <p className="text-sm text-gray-500">卖家：{bike.owner_username} | ID: {bike.id.slice(0, 8)}...</p>
-                            <p className="text-sm text-gray-500">时间段 ID: {bike.time_slot_id?.slice(0, 8)}...</p>
-                          </div>
-                          <button
-                            onClick={() => handleConfirmBicycle(bike.id)}
-                            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-bold"
-                          >
-                            ✓ 确认交易
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Pending Appointments List (old name for backward compatibility) */}
-                {dashboardData.waiting_appointments && dashboardData.waiting_appointments.length > 0 && (
-                  <div className="bg-white rounded-2xl shadow-xl p-6">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-4">待处理预约</h2>
-                    <div className="space-y-3">
-                      {dashboardData.waiting_appointments.map((apt: any) => (
-                        <div key={apt.id} className="p-4 bg-gray-50 rounded-lg flex justify-between items-center">
-                          <div>
-                            <p className="font-bold text-gray-800">预约 ID: {apt.id.slice(0, 8)}...</p>
-                            <p className="text-sm text-gray-500">类型：{apt.type === 'pick-up' ? '取车' : '还车'}</p>
-                          </div>
-                          <button
-                            onClick={() => setActiveTab("appointments")}
-                            className="px-4 py-2 bg-[#2ab26a] text-white rounded-lg hover:bg-[#249a5c]"
-                          >
-                            处理
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Pending Bikes Tab */}
-            {activeTab === "pending" && (
-              <div className="bg-white rounded-2xl shadow-xl p-8">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">待审核车辆</h2>
-                {pendingBikes.length > 0 ? (
-                      <div className="space-y-4">
-                        {pendingBikes.map((bike: any) => (
-                          <div key={bike.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                            <div>
-                              <p className="font-bold text-gray-700">{bike.brand}</p>
-                              <p className="text-sm text-gray-500">
-                                车主 ID: {bike.owner_id?.substring(0, 8)}... | 价格：¥{bike.price} | 成色：{bike.condition}/10
-                              </p>
-                            </div>
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => handleProposeTimeSlots(bike.id)}
-                                className="bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-600 transition"
-                                title="卖家场景：提出时间段，等待卖家选择"
-                              >
-                                提出时间段
-                              </button>
-                              <button
-                                onClick={() => handleApprove(bike.id)}
-                                className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition"
-                                title="买家场景：直接批准上架"
-                              >
-                                批准上架
-                              </button>
-                              <button
-                                onClick={() => handleReject(bike.id)}
-                                className="bg-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-600 transition"
-                              >
-                                拒绝
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-gray-500">当前没有待审核的车辆。</p>
-                    )}
-              </div>
-            )}
-
-            {/* Users Tab */}
-            {activeTab === "users" && (
-              <div className="bg-white rounded-2xl shadow-xl p-8">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-                  <User className="mr-3 text-emerald-500" />用户管理
-                </h2>
-                {user.role === "SUPER_ADMIN" ? (
-                  <div className="space-y-4">
-                    {allUsers.map((u: any) => (
-                      <div key={u.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                        <div className="flex items-center space-x-4">
-                          <div className="bg-gray-200 p-3 rounded-full">
-                            <User size={24} className="text-gray-600" />
-                          </div>
-                          <div>
-                            <p className="font-bold text-gray-700">{u.name || "未命名"}</p>
-                            <p className="text-sm text-gray-500">{u.email}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                          <span className={`px-3 py-1 text-xs font-bold rounded-full ${
-                            u.role === "SUPER_ADMIN" ? "bg-purple-100 text-purple-700" :
-                            u.role === "ADMIN" ? "bg-blue-100 text-blue-700" :
-                            "bg-gray-200 text-gray-600"
-                          }`}>
-                            {u.role === "SUPER_ADMIN" ? "主负责人" : u.role === "ADMIN" ? "管理员" : "普通用户"}
-                          </span>
-                          {u.role !== "SUPER_ADMIN" && (
-                            <select
-                              value={u.role}
-                              onChange={(e) => handleUpdateRole(u.id, e.target.value)}
-                              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                            >
-                              <option value="USER">设为普通用户</option>
-                              <option value="ADMIN">设为管理员</option>
-                            </select>
-                          )}
+                        <div>
+                          <p className="font-medium text-gray-900">{bike.brand} {bike.model}</p>
+                          <p className="text-sm text-gray-500">¥{bike.price} · {bike.color}</p>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500">您没有权限管理用户，只有主负责人可以。</p>
-                )}
-              </div>
-            )}
-
-            {/* Bikes Tab */}
-            {activeTab === "bikes" && (
-              <div className="bg-white rounded-2xl shadow-xl p-8">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-                  <Bike className="mr-3 text-emerald-500" />所有车辆
-                </h2>
-                <div className="space-y-4">
-                  {allBikes.map((bike: any) => (
-                    <div key={bike.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                      <div>
-                            <p className="font-bold text-gray-700">{bike.brand}</p>
-                            <p className="text-sm text-gray-500">
-                              ¥{bike.price} | 成色 {bike.condition}/10 | 状态：{
-                                bike.status === 'PENDING_APPROVAL' ? '待审核' :
-                                bike.status === 'IN_STOCK' ? '在库' :
-                                bike.status === 'PENDING_SELLER_SLOT_SELECTION' ? '等待卖家选择' :
-                                bike.status === 'PENDING_BUYER_SLOT_SELECTION' ? '等待买家选择' :
-                                bike.status === 'PENDING_ADMIN_CONFIRMATION_SELLER' ? '等待管理员确认（卖家）' :
-                                bike.status === 'PENDING_ADMIN_CONFIRMATION_BUYER' ? '等待管理员确认（买家）' :
-                                bike.status === 'RESERVED' ? '已预约' : '已售出'
-                              }
-                            </p>
-                          </div>
-                          <span className={`px-3 py-1 text-xs font-bold rounded-full ${
-                            bike.status === 'IN_STOCK' ? 'bg-green-100 text-green-700' :
-                            bike.status === 'PENDING_APPROVAL' ? 'bg-yellow-100 text-yellow-700' :
-                            bike.status === 'PENDING_SELLER_SLOT_SELECTION' || bike.status === 'PENDING_BUYER_SLOT_SELECTION' ? 'bg-orange-100 text-orange-700' :
-                            bike.status === 'PENDING_ADMIN_CONFIRMATION_SELLER' || bike.status === 'PENDING_ADMIN_CONFIRMATION_BUYER' ? 'bg-purple-100 text-purple-700' :
-                            bike.status === 'RESERVED' ? 'bg-blue-100 text-blue-700' :
-                            'bg-gray-200 text-gray-600'
-                          }`}>
-                            {bike.status}
-                          </span>
-                          {bike.status === 'RESERVED' && (
-                            <button
-                              onClick={() => handleStoreInInventory(bike.id)}
-                              className="ml-2 bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition"
-                              title="线下交易完成，将自行车存入库存"
-                            >
-                              ✓ 确认入库
-                            </button>
-                          )}
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleApprove(bike.id)}
+                          className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+                        >
+                          <CheckCircle size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleReject(bike.id)}
+                          className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                        >
+                          <XCircle size={18} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
-
-            {/* Appointments Tab */}
-            {activeTab === "appointments" && (
-              <div className="bg-white rounded-2xl shadow-xl p-8">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-                  <Calendar className="mr-3 text-emerald-500" />活跃预约
-                </h2>
-                <div className="space-y-4">
-                  {allAppointments.map((apt: any) => {
-                    // 查找对应的自行车信息
-                    const bike = (allBikes as any[]).find((b: any) => b.id === apt.bicycle_id);
-                    return (
-                    <div key={apt.id} className="p-4 bg-gray-50 rounded-lg">
-                      <div className="flex justify-between items-center mb-3">
-                        <div>
-                          <p className="font-bold text-gray-700">预约 ID: {apt.id.substring(0, 8)}...</p>
-                          <p className="text-sm text-gray-500">
-                            车辆：{bike ? bike.brand : '未知'} (ID: {apt.bicycle_id.substring(0, 8)}...) | 类型：{apt.type === 'drop-off' ? '交车' : '提车'}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            状态：<span className={`px-2 py-1 rounded text-xs font-bold ${
-                              apt.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
-                              apt.status === 'CONFIRMED' ? 'bg-blue-100 text-blue-700' :
-                              apt.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
-                              'bg-gray-100 text-gray-700'
-                            }`}>{apt.status}</span>
-                          </p>
-                        </div>
-                        {apt.status === 'CONFIRMED' && apt.type === 'pick-up' && (
-                          <button
-                            onClick={() => handleConfirmPickup(apt.id)}
-                            className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition"
-                          >
-                            确认提车
-                          </button>
-                        )}
-                        {apt.status === 'CONFIRMED' && apt.type === 'drop-off' && (
-                          <p className="text-sm text-gray-500">等待线下交车完成</p>
-                        )}
-                      </div>
-                      
-                      {/* 时间段管理 */}
-                      <div className="mt-3 pt-3 border-t border-gray-200">
-                        <p className="text-sm font-bold text-gray-600 mb-2">时间段管理：</p>
-                        {apt.status === 'PENDING' && (
-                          <button
-                            onClick={() => handleProposeAppointmentSlots(apt.id)}
-                            className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-600 transition"
-                          >
-                            提出时间段
-                          </button>
-                        )}
-                        {apt.status === 'CONFIRMED' && (
-                          <p className="text-sm text-gray-500">时间段已确认，等待交易完成</p>
-                        )}
-                      </div>
-                    </div>
-                  );})}
-                </div>
-              </div>
-            )}
-          </>
+          </div>
         )}
-      </div>
+
+        {/* 待审核 */}
+        {activeTab === 'pending' && renderPendingBikes()}
+
+        {/* 用户管理 */}
+        {activeTab === 'users' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">用户管理</h2>
+              <div className="relative">
+                <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="搜索用户..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            {renderUsers()}
+          </div>
+        )}
+
+        {/* 车辆管理 */}
+        {activeTab === 'bikes' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">车辆管理</h2>
+              <div className="relative">
+                <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="搜索车辆..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            {renderBikes()}
+          </div>
+        )}
+
+        {/* 预约管理 */}
+        {activeTab === 'appointments' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">预约管理</h2>
+              <div className="relative">
+                <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="搜索预约..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            {renderAppointments()}
+          </div>
+        )}
+      </main>
     </div>
   );
 }

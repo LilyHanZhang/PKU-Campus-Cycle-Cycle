@@ -210,15 +210,19 @@ def select_time_slot(
     # 发送私信通知管理员确认
     from ..routers.messages import send_message_to_user
     try:
+        # 使用当前用户 ID 作为发送者（而不是系统消息）
+        from uuid import UUID
+        current_user_id = UUID(current_user["user_id"]) if isinstance(current_user["user_id"], str) else current_user["user_id"]
+        
         # 获取所有管理员
         from ..models import User, Role
         admins = db.query(User).filter(User.role.in_([Role.ADMIN.value, Role.SUPER_ADMIN.value])).all()
         for admin in admins:
             send_message_to_user(
                 db=db,
-                sender_id=None,  # 系统消息
+                sender_id=current_user_id,  # 使用当前用户 ID
                 receiver_id=admin.id,
-                content=f"用户已选择时间段，请确认。预约 ID: {apt_id}"
+                content=f"用户 {current_user.get('name', 'Unknown')} 已选择时间段，请确认。预约 ID: {apt_id}"
             )
     except Exception as e:
         print(f"Failed to send notification: {e}")
@@ -324,26 +328,30 @@ def select_bicycle_time_slot(
     
     # 发送私信通知管理员确认
     from ..routers.messages import send_message_to_user
-    from ..models import User, Role
     try:
+        # 使用当前用户 ID 作为发送者（而不是系统消息）
+        from uuid import UUID
+        current_user_id = UUID(current_user["user_id"]) if isinstance(current_user["user_id"], str) else current_user["user_id"]
+        
         # 获取所有管理员
+        from ..models import User, Role
         admins = db.query(User).filter(User.role.in_([Role.ADMIN.value, Role.SUPER_ADMIN.value])).all()
         for admin in admins:
             if appointment and appointment.type == "drop-off":
                 # 卖家流程：通知管理员确认入库
                 send_message_to_user(
                     db=db,
-                    sender_id=None,
+                    sender_id=current_user_id,
                     receiver_id=admin.id,
-                    content=f"卖家已选择时间段，请确认入库。自行车 ID: {bike_id}"
+                    content=f"卖家 {current_user.get('name', 'Unknown')} 已选择时间段，请确认入库。自行车 ID: {bike_id}"
                 )
             else:
                 # 买家流程：通知管理员确认提车
                 send_message_to_user(
                     db=db,
-                    sender_id=None,
+                    sender_id=current_user_id,
                     receiver_id=admin.id,
-                    content=f"买家已选择时间段，请确认提车。自行车 ID: {bike_id}"
+                    content=f"买家 {current_user.get('name', 'Unknown')} 已选择时间段，请确认提车。自行车 ID: {bike_id}"
                 )
     except Exception as e:
         print(f"Failed to send notification: {e}")
@@ -549,9 +557,12 @@ def change_time_slot(
     # 发送私信通知用户
     try:
         from ..routers.messages import send_message_to_user
+        # 使用管理员 ID 作为发送者
+        from uuid import UUID
+        admin_id = UUID(current_user["user_id"]) if isinstance(current_user["user_id"], str) else current_user["user_id"]
         send_message_to_user(
             db=db,
-            sender_id=None,  # 系统消息
+            sender_id=admin_id,
             receiver_id=appointment.user_id,
             content=f"管理员已更改时间段，请重新确认。预约 ID: {apt_id}，新时间段：{new_time_slot.start_time} - {new_time_slot.end_time}"
         )

@@ -292,6 +292,27 @@ class TestMessageFeatures:
         # 应该能找到自己的会话
         self_conv = next((c for c in conversations if c["user_id"] == current_user_id), None)
         assert self_conv is not None, "应该能在会话列表中找到自己的会话"
+    
+    def test_get_all_users(self, auth_headers: Dict[str, str], test_user2: Dict[str, Any]):
+        """测试获取所有用户列表（用于新建对话）"""
+        response = requests.get(
+            f"{BASE_URL}/users/",
+            headers=auth_headers
+        )
+        assert response.status_code == 200
+        users = response.json()
+        assert isinstance(users, list)
+        assert len(users) > 0
+        
+        # 验证用户数据结构
+        user = users[0]
+        assert "id" in user
+        assert "email" in user
+        assert "role" in user
+        
+        # 验证应该包含第二个测试用户
+        found_user2 = any(u["id"] == test_user2["id"] for u in users)
+        assert found_user2, "用户列表应该包含第二个测试用户"
 
 
 if __name__ == "__main__":

@@ -11,16 +11,17 @@ import {
   ArrowLeft,
   Image,
   Smile,
-  MoreVertical,
+  Plus,
+  X,
   Check,
-  CheckCheck,
-  X
+  CheckCheck
 } from "lucide-react";
 
 interface User {
   id: string;
   name: string;
   avatar_url?: string;
+  email: string;
 }
 
 interface Message {
@@ -54,6 +55,9 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [showMobileList, setShowMobileList] = useState(true);
+  const [showNewMessageModal, setShowNewMessageModal] = useState(false);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const API_URL = "https://pku-campus-cycle-cycle.onrender.com";
 
@@ -63,6 +67,7 @@ export default function MessagesPage() {
       return;
     }
     fetchConversations();
+    fetchAllUsers();
   }, [isAuthenticated, router]);
 
   useEffect(() => {
@@ -91,6 +96,20 @@ export default function MessagesPage() {
       console.error("获取会话列表失败:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAllUsers = async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await axios.get(`${API_URL}/users/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // 过滤掉自己
+      const filteredUsers = response.data.filter((u: User) => u.id !== user?.id);
+      setAllUsers(filteredUsers);
+    } catch (error) {
+      console.error("获取用户列表失败:", error);
     }
   };
 
@@ -129,6 +148,32 @@ export default function MessagesPage() {
       console.error("发送消息失败:", error);
     } finally {
       setSending(false);
+    }
+  };
+
+  const startNewConversation = async () => {
+    if (!selectedUserId) return;
+    
+    try {
+      const token = localStorage.getItem("access_token");
+      // 先发送一条消息创建对话
+      await axios.post(
+        `${API_URL}/messages/`,
+        {
+          receiver_id: selectedUserId,
+          content: "你好！"
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      await fetchConversations();
+      setSelectedConversation(selectedUserId);
+      setShowNewMessageModal(false);
+      setSelectedUserId("");
+      setNewMessage("");
+    } catch (error) {
+      console.error("创建对话失败:", error);
     }
   };
 
@@ -174,7 +219,7 @@ export default function MessagesPage() {
     conv.user_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const selectedUser = conversations.find(c => c.user_id === selectedConversation);
+  const selectedUserData = conversations.find(c => c.user_id === selectedConversation);
 
   if (!isAuthenticated) return null;
 
@@ -196,12 +241,21 @@ export default function MessagesPage() {
             我的私信
           </h1>
         </div>
-        <button
-          onClick={() => router.push("/profile")}
-          className="text-gray-600 hover:bg-gray-100 px-4 py-2 rounded-full transition font-medium"
-        >
-          返回个人中心
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setShowNewMessageModal(true)}
+            className="flex items-center space-x-1 bg-purple-500 text-white px-4 py-2 rounded-full hover:bg-purple-600 transition text-sm font-medium"
+          >
+            <Plus size={18} />
+            <span className="hidden sm:inline">新建对话</span>
+          </button>
+          <button
+            onClick={() => router.push("/profile")}
+            className="text-gray-600 hover:bg-gray-100 px-4 py-2 rounded-full transition font-medium"
+          >
+            返回个人中心
+          </button>
+        </div>
       </div>
 
       {/* 主要内容区 - 左右分栏布局 */}
@@ -232,6 +286,12 @@ export default function MessagesPage() {
               <div className="flex flex-col items-center justify-center py-12 text-gray-500">
                 <MessageSquare size={48} className="mb-4 opacity-20" />
                 <p className="text-sm">暂无会话</p>
+                <button
+                  onClick={() => setShowNewMessageModal(true)}
+                  className="mt-4 text-purple-500 hover:text-purple-600 font-medium"
+                >
+                  发起新对话
+                </button>
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
@@ -305,17 +365,17 @@ export default function MessagesPage() {
               <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-white">
                 <div className="flex items-center space-x-3">
                   <img
-                    src={selectedUser?.user_avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUser?.user_name || '')}&background=8b5cf6&color=fff`}
-                    alt={selectedUser?.user_name}
+                    src={selectedUserData?.user_avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUserData?.user_name || '')}&background=8b5cf6&color=fff`}
+                    alt={selectedUserData?.user_name}
                     className="w-10 h-10 rounded-full object-cover ring-2 ring-purple-100"
                   />
                   <div>
-                    <h2 className="font-bold text-gray-900">{selectedUser?.user_name}</h2>
+                    <h2 className="font-bold text-gray-900">{selectedUserData?.user_name}</h2>
                     <p className="text-xs text-gray-500">在线</p>
                   </div>
                 </div>
                 <button
-                  onClick={(e) => selectedUser && deleteConversation(selectedUser.user_id, e)}
+                  onClick={(e) => selectedConversation && deleteConversation(selectedConversation, e)}
                   className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition"
                   title="删除对话"
                 >
@@ -433,6 +493,59 @@ export default function MessagesPage() {
           )}
         </div>
       </div>
+
+      {/* 新建对话弹窗 */}
+      {showNewMessageModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">新建对话</h2>
+              <button
+                onClick={() => setShowNewMessageModal(false)}
+                className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  选择用户
+                </label>
+                <select
+                  value={selectedUserId}
+                  onChange={(e) => setSelectedUserId(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="">请选择一个用户</option>
+                  {allUsers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name || u.email} ({u.role === 'ADMIN' || u.role === 'SUPER_ADMIN' ? '管理员' : '用户'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowNewMessageModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={startNewConversation}
+                  disabled={!selectedUserId}
+                  className="flex-1 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition font-medium"
+                >
+                  开始对话
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 自定义动画样式 */}
       <style jsx global>{`

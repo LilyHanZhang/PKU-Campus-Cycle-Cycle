@@ -230,8 +230,8 @@ class TestMessageFeatures:
         messages = conv_response.json()
         assert len(messages) == 0, "对话中的所有消息应该已被删除"
     
-    def test_cannot_send_message_to_self(self, auth_headers: Dict[str, str]):
-        """测试不能给自己发送消息"""
+    def test_send_message_to_self(self, auth_headers: Dict[str, str]):
+        """测试可以给自己发送消息（笔记功能）"""
         # 获取当前用户 ID
         user_response = requests.get(
             f"{BASE_URL}/auth/me",
@@ -239,17 +239,31 @@ class TestMessageFeatures:
         )
         current_user_id = user_response.json()["user_id"]
         
-        # 尝试给自己发送消息
+        # 给自己发送消息
         message_data = {
             "receiver_id": current_user_id,
-            "content": "测试给自己发消息"
+            "content": "这是一条给自己的备忘录消息"
         }
         response = requests.post(
             f"{BASE_URL}/messages/",
             json=message_data,
             headers=auth_headers
         )
-        assert response.status_code == 400  # 应该返回错误
+        assert response.status_code == 200
+        data = response.json()
+        assert data["content"] == message_data["content"]
+        assert data["sender_id"] == current_user_id
+        assert data["receiver_id"] == current_user_id
+        
+        # 验证可以在会话列表中看到
+        conv_response = requests.get(
+            f"{BASE_URL}/messages/conversations",
+            headers=auth_headers
+        )
+        conversations = conv_response.json()
+        # 应该能找到自己的会话
+        self_conv = next((c for c in conversations if c["user_id"] == current_user_id), None)
+        assert self_conv is not None, "应该能在会话列表中找到自己的会话"
 
 
 if __name__ == "__main__":

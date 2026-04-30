@@ -25,9 +25,9 @@ def send_message_to_user(
         if not sender:
             raise HTTPException(status_code=404, detail="发送者不存在")
         
-        # 不能给自己发消息
-        if str(sender_id) == str(receiver_id):
-            raise HTTPException(status_code=400, detail="不能给自己发送消息")
+        # 允许给自己发送消息（用作笔记或备忘录功能）
+        # if str(sender_id) == str(receiver_id):
+        #     raise HTTPException(status_code=400, detail="不能给自己发送消息")
     
     db_message = Message(
         sender_id=sender_id,

@@ -250,6 +250,189 @@ export default function AdminDashboard() {
     });
   };
 
+  // 确认时间段（买家已选择时间段后）
+  const handleConfirmTimeSlot = async (aptId: string) => {
+    const token = localStorage.getItem("access_token");
+    try {
+      await axios.put(
+        `${API_URL}/time_slots/confirm/${aptId}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("✓ 已确认时间段！");
+      fetchData();
+    } catch (err: any) {
+      console.error("Failed to confirm time slot", err);
+      alert(`操作失败：${err.response?.data?.detail || "请重试"}`);
+    }
+  };
+
+  // 确认提车
+  const handleConfirmPickup = async (aptId: string) => {
+    const token = localStorage.getItem("access_token");
+    try {
+      await axios.put(
+        `${API_URL}/time_slots/confirm-pickup/${aptId}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("✓ 已确认提车！");
+      fetchData();
+    } catch (err: any) {
+      console.error("Failed to confirm pickup", err);
+      alert(`操作失败：${err.response?.data?.detail || "请重试"}`);
+    }
+  };
+
+  // 确认自行车交易（卖家已选择时间段后）
+  const handleConfirmBicycle = async (bikeId: string) => {
+    const token = localStorage.getItem("access_token");
+    try {
+      await axios.post(
+        `${API_URL}/bicycles/${bikeId}/confirm`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("✓ 已确认自行车交易！");
+      fetchData();
+    } catch (err: any) {
+      console.error("Failed to confirm bicycle", err);
+      alert(`操作失败：${err.response?.data?.detail || "请重试"}`);
+    }
+  };
+
+  // 为预约提出时间段
+  const handleProposeAppointmentSlots = async (aptId: string) => {
+    const token = localStorage.getItem("access_token");
+    
+    // 创建多个时间段输入框
+    const tempDiv = document.createElement('div');
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const minDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+    
+    tempDiv.innerHTML = `
+      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 9999; max-height: 80vh; overflow-y: auto; min-width: 550px;">
+        <h3 style="margin-bottom: 15px; font-size: 20px; font-weight: bold; color: #1f2937;">为预约提出时间段</h3>
+        <p style="margin-bottom: 15px; color: #6b7280; font-size: 14px; line-height: 1.6;">
+          <strong>使用说明：</strong><br/>
+          1. 点击日期时间输入框，会弹出日期选择器<br/>
+          2. 选择日期后，在时间部分可以直接点击小时或分钟数字进行选择<br/>
+          3. 也可以直接在输入框中手动输入时间（格式：YYYY-MM-DD HH:MM）<br/>
+          4. 请至少提出 1 个时间段（可添加多个）
+        </p>
+        <div id="slotsContainer" style="max-height: 350px; overflow-y: auto; margin-bottom: 15px;"></div>
+        <button id="addSlotBtn" style="width: 100%; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: 600;">+ 添加时间段</button>
+        <div style="display: flex; gap: 10px;">
+          <button id="submitBtn" style="flex: 1; padding: 12px; background: #2ab26a; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">提交</button>
+          <button id="cancelBtn" style="flex: 1; padding: 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">取消</button>
+        </div>
+      </div>
+      <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9998;"></div>
+    `;
+    document.body.appendChild(tempDiv);
+
+    const slotsContainer = document.getElementById('slotsContainer')!;
+    let slotCount = 0;
+
+    const addSlotInput = () => {
+      slotCount++;
+      const slotDiv = document.createElement('div');
+      slotDiv.className = 'slot-input';
+      slotDiv.style.cssText = 'margin-bottom: 12px; padding: 12px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;';
+      slotDiv.innerHTML = `
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <div style="flex: 1;">
+            <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">开始时间</label>
+            <input type="datetime-local" class="startTime" min="${minDateTime}" step="60" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+          </div>
+          <div style="flex: 1;">
+            <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">结束时间</label>
+            <input type="datetime-local" class="endTime" min="${minDateTime}" step="60" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+          </div>
+          ${slotCount > 1 ? '<button class="removeSlot" style="padding: 8px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold;">×</button>' : ''}
+        </div>
+      `;
+      slotsContainer.appendChild(slotDiv);
+
+      // 移除按钮事件
+      const removeBtn = slotDiv.querySelector('.removeSlot');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', () => {
+          if (slotsContainer.children.length > 1) {
+            slotsContainer.removeChild(slotDiv);
+          } else {
+            alert("至少需要一个时间段");
+          }
+        });
+      }
+    };
+
+    // 添加第一个时间段
+    addSlotInput();
+
+    // 添加时间段按钮
+    document.getElementById('addSlotBtn')!.addEventListener('click', addSlotInput);
+
+    // 取消按钮
+    document.getElementById('cancelBtn')!.addEventListener('click', () => {
+      document.body.removeChild(tempDiv);
+    });
+
+    // 提交按钮
+    document.getElementById('submitBtn')!.addEventListener('click', async () => {
+      const startTimeInputs = document.querySelectorAll('.startTime') as NodeListOf<HTMLInputElement>;
+      const endTimeInputs = document.querySelectorAll('.endTime') as NodeListOf<HTMLInputElement>;
+      
+      const timeSlots: Array<{start_time: string; end_time: string}> = [];
+      let hasError = false;
+
+      for (let i = 0; i < startTimeInputs.length; i++) {
+        const startTime = startTimeInputs[i].value;
+        const endTime = endTimeInputs[i].value;
+
+        if (!startTime || !endTime) {
+          alert(`请填写第 ${i + 1} 个时间段的开始和结束时间`);
+          hasError = true;
+          break;
+        }
+
+        if (new Date(startTime) >= new Date(endTime)) {
+          alert(`第 ${i + 1} 个时间段的开始时间必须早于结束时间`);
+          hasError = true;
+          break;
+        }
+
+        timeSlots.push({
+          start_time: new Date(startTime).toISOString(),
+          end_time: new Date(endTime).toISOString()
+        });
+      }
+      
+      if (hasError || timeSlots.length === 0) {
+        return;
+      }
+
+      try {
+        await axios.post(
+          `${API_URL}/appointments/${aptId}/propose-slots`,
+          timeSlots,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        alert(`✓ 已提出 ${timeSlots.length} 个时间段，等待用户选择！`);
+        document.body.removeChild(tempDiv);
+        fetchData();
+      } catch (err: any) {
+        console.error("Failed to propose appointment time slots", err);
+        alert(`操作失败：${err.response?.data?.detail || "请重试"}`);
+      }
+    });
+  };
+
   // 过滤数据
   const filteredUsers = allUsers.filter((user: any) =>
     user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -491,9 +674,11 @@ export default function AdminDashboard() {
                   </h3>
                   <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
                     apt.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                    apt.status === 'CONFIRMED' ? 'bg-blue-100 text-blue-700' :
                     'bg-green-100 text-green-700'
                   }`}>
-                    {apt.status === 'PENDING' ? '待确认' : '已确认'}
+                    {apt.status === 'PENDING' ? '待确认' :
+                     apt.status === 'CONFIRMED' ? '已确认' : '已完成'}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
@@ -509,6 +694,29 @@ export default function AdminDashboard() {
                     <span className="w-20 text-gray-400">时间:</span>
                     <span className="font-medium">{new Date(apt.created_at).toLocaleDateString('zh-CN')}</span>
                   </div>
+                </div>
+                
+                {/* 操作按钮 */}
+                <div className="mt-4 flex gap-2">
+                  {apt.status === 'PENDING' && (
+                    <button
+                      onClick={() => handleProposeAppointmentSlots(apt.id)}
+                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium text-sm"
+                    >
+                      📅 提出时间段
+                    </button>
+                  )}
+                  {apt.status === 'CONFIRMED' && apt.type === 'pick-up' && (
+                    <button
+                      onClick={() => handleConfirmPickup(apt.id)}
+                      className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium text-sm"
+                    >
+                      ✓ 确认提车
+                    </button>
+                  )}
+                  {apt.status === 'CONFIRMED' && apt.type === 'drop-off' && (
+                    <span className="text-sm text-gray-500">等待线下交车完成</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -769,6 +977,71 @@ export default function AdminDashboard() {
                           <XCircle size={18} />
                         </button>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 等待确认的预约（买家已选时间段） */}
+            {dashboardData.waiting_appointments && dashboardData.waiting_appointments.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-gray-900">⏳ 等待确认的预约（买家已选时间段）</h2>
+                  <button
+                    onClick={() => setActiveTab('appointments')}
+                    className="text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center"
+                  >
+                    查看全部
+                    <ChevronDown size={16} className="ml-1 rotate-[-90deg]" />
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {dashboardData.waiting_appointments.slice(0, 3).map((apt: any) => (
+                    <div key={apt.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">预约 ID: {apt.id.slice(0, 8)}...</p>
+                        <p className="text-sm text-gray-500">用户：{apt.username} | 车辆：{apt.bicycle_brand}</p>
+                        <p className="text-sm text-gray-500">类型：{apt.type === 'pick-up' ? '取车' : '还车'}</p>
+                      </div>
+                      <button
+                        onClick={() => handleConfirmTimeSlot(apt.id)}
+                        className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium text-sm"
+                      >
+                        ✓ 确认时间段
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 等待确认的自行车（卖家已选时间段） */}
+            {dashboardData.waiting_bicycles && dashboardData.waiting_bicycles.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-gray-900">⏳ 等待确认的自行车（卖家已选时间段）</h2>
+                  <button
+                    onClick={() => setActiveTab('bikes')}
+                    className="text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center"
+                  >
+                    查看全部
+                    <ChevronDown size={16} className="ml-1 rotate-[-90deg]" />
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {dashboardData.waiting_bicycles.slice(0, 3).map((bike: any) => (
+                    <div key={bike.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">车辆：{bike.brand}</p>
+                        <p className="text-sm text-gray-500">卖家：{bike.owner_username} | ID: {bike.id.slice(0, 8)}...</p>
+                      </div>
+                      <button
+                        onClick={() => handleConfirmBicycle(bike.id)}
+                        className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium text-sm"
+                      >
+                        ✓ 确认交易
+                      </button>
                     </div>
                   ))}
                 </div>

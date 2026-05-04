@@ -241,11 +241,8 @@ export default function ProfilePage() {
               </Link>
 
               {/* My Bikes */}
-              <Link href="/profile?tab=bikes">
-                <div 
-                  onClick={() => setActiveTab('bikes')}
-                  className="group bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-2xl p-6 transition-all hover:scale-105 cursor-pointer"
-                >
+              <Link href="/my-bicycles">
+                <div className="group bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-2xl p-6 transition-all hover:scale-105 cursor-pointer">
                   <div className="flex items-center justify-between mb-3">
                     <div className="bg-white/30 p-3 rounded-xl">
                       <Bike className="w-6 h-6" />
@@ -265,11 +262,8 @@ export default function ProfilePage() {
               </Link>
 
               {/* My Appointments */}
-              <Link href="/profile?tab=appointments">
-                <div 
-                  onClick={() => setActiveTab('appointments')}
-                  className="group bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-2xl p-6 transition-all hover:scale-105 cursor-pointer"
-                >
+              <Link href="/my-appointments">
+                <div className="group bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-2xl p-6 transition-all hover:scale-105 cursor-pointer">
                   <div className="flex items-center justify-between mb-3">
                     <div className="bg-white/30 p-3 rounded-xl">
                       <Calendar className="w-6 h-6" />

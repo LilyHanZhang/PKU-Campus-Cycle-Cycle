@@ -32,6 +32,9 @@ const formatToBeijingTime = (isoString: string) => {
   const utcHours = date.getUTCHours();
   const utcMinutes = date.getUTCMinutes();
   
+  console.log('原始 ISO 时间:', isoString);
+  console.log('解析的 UTC 时间:', `${utcYear}-${utcMonth}-${utcDay} ${utcHours}:${utcMinutes}`);
+  
   // 转换为北京时间（UTC+8）
   let beijingHours = utcHours + 8;
   let beijingDay = utcDay;
@@ -53,7 +56,10 @@ const formatToBeijingTime = (isoString: string) => {
     }
   }
   
-  return `${beijingYear}/${String(beijingMonth).padStart(2, '0')}/${String(beijingDay).padStart(2, '0')} ${String(beijingHours).padStart(2, '0')}:${String(utcMinutes).padStart(2, '0')}`;
+  const result = `${beijingYear}/${String(beijingMonth).padStart(2, '0')}/${String(beijingDay).padStart(2, '0')} ${String(beijingHours).padStart(2, '0')}:${String(utcMinutes).padStart(2, '0')}`;
+  console.log('转换后的北京时间:', result);
+  
+  return result;
 };
 
 // Countdown Timer Component
@@ -369,6 +375,10 @@ export default function AdminDashboard() {
         // 将选择的时间视为北京时间（UTC+8）
         const startDateTime = new Date(`${startDate}T${startTime}:00+08:00`);
         const endDateTime = new Date(`${endDate}T${endTime}:00+08:00`);
+        
+        console.log('管理员选择的日期时间:', `${startDate} ${startTime}`);
+        console.log('创建的 Date 对象（start）:', startDateTime.toISOString());
+        console.log('创建的 Date 对象（end）:', endDateTime.toISOString());
         
         if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
           alert("日期或时间格式不正确，请重新选择");

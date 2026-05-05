@@ -403,6 +403,13 @@ export default function AdminDashboard() {
           start_time: startDateTime.toISOString(),
           end_time: endDateTime.toISOString()
         });
+        
+        console.log('准备发送的时间段:', {
+          start_time: startDateTime.toISOString(),
+          end_time: endDateTime.toISOString(),
+          start_time_full: startDateTime.toString(),
+          end_time_full: endDateTime.toString()
+        });
       }
       
       if (hasError || timeSlots.length === 0) {

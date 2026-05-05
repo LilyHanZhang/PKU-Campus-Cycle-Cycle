@@ -268,7 +268,10 @@ export default function Home() {
                 </h2>
                 {countdowns.length > 0 ? (
                   <div className="space-y-4">
-                    {countdowns.map((cd: any) => (
+                    {countdowns.map((cd: any) => {
+                      console.log('首页显示时间段 - 原始数据:', cd.start_time);
+                      console.log('首页显示时间段 - 转换后:', formatToBeijingTime(cd.start_time));
+                      return (
                       <div key={cd.appointment_id} className="bg-white/20 backdrop-blur-sm rounded-2xl p-5">
                         <div className="flex justify-between items-center">
                           <div>
@@ -292,7 +295,7 @@ export default function Home() {
                           </div>
                         </div>
                       </div>
-                    ))}
+                    )})}
                   </div>
                 ) : pendingCount > 0 ? (
                   <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-5 flex items-center">

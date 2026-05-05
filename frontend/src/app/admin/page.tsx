@@ -372,13 +372,33 @@ export default function AdminDashboard() {
         }
         
         // 组合日期和时间 - 日期格式 YYYY-MM-DD，时间格式 HH:mm
-        // 将选择的时间视为北京时间（UTC+8）
-        const startDateTime = new Date(`${startDate}T${startTime}:00+08:00`);
-        const endDateTime = new Date(`${endDate}T${endTime}:00+08:00`);
+        // 将选择的时间视为北京时间（UTC+8），手动转换为 UTC
+        const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+        const [startHour, startMinute] = startTime.split(':').map(Number);
         
-        console.log('管理员选择的日期时间:', `${startDate} ${startTime}`);
-        console.log('创建的 Date 对象（start）:', startDateTime.toISOString());
-        console.log('创建的 Date 对象（end）:', endDateTime.toISOString());
+        // 创建 UTC 时间（北京时间 - 8 小时 = UTC 时间）
+        const startDateTime = new Date(Date.UTC(
+          startYear, 
+          startMonth - 1, // JS 月份从 0 开始
+          startDay, 
+          startHour - 8, // 减去 8 小时得到 UTC
+          startMinute
+        ));
+        
+        const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+        const [endHour, endMinute] = endTime.split(':').map(Number);
+        
+        const endDateTime = new Date(Date.UTC(
+          endYear, 
+          endMonth - 1, 
+          endDay, 
+          endHour - 8, 
+          endMinute
+        ));
+        
+        console.log('管理员选择的日期时间:', `${startDate} ${startTime} (北京时间)`);
+        console.log('转换后的 UTC 时间（start）:', startDateTime.toISOString());
+        console.log('转换后的 UTC 时间（end）:', endDateTime.toISOString());
         
         if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
           alert("日期或时间格式不正确，请重新选择");

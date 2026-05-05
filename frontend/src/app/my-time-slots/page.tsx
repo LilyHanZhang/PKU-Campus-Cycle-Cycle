@@ -179,7 +179,11 @@ export default function MyTimeSlotsPage() {
     const dateObj = new Date(`${beijingYear}-${String(beijingMonth).padStart(2, '0')}-${String(beijingDay).padStart(2, '0')}`);
     const weekday = weekDays[dateObj.getUTCDay()];
     
-    return `${String(beijingMonth).padStart(2, '0')}/${String(beijingDay).padStart(2, '0')}周${weekday}`;
+    return {
+      date: `${String(beijingMonth).padStart(2, '0')}/${String(beijingDay).padStart(2, '0')}`,
+      weekday: `周${weekday}`,
+      full: `${String(beijingMonth).padStart(2, '0')}/${String(beijingDay).padStart(2, '0')}周${weekday}`
+    };
   };
 
   const formatTime = (isoString: string) => {
@@ -215,7 +219,8 @@ export default function MyTimeSlotsPage() {
   const groupSlotsByDate = (slots: TimeSlot[]) => {
     const grouped: { [key: string]: TimeSlot[] } = {};
     slots.forEach(slot => {
-      const dateKey = new Date(slot.start_time).toLocaleDateString('zh-CN');
+      const startDate = formatDate(slot.start_time);
+      const dateKey = startDate.date;
       if (!grouped[dateKey]) {
         grouped[dateKey] = [];
       }
@@ -384,19 +389,25 @@ export default function MyTimeSlotsPage() {
                         <div className="absolute left-8 top-4 bottom-4 w-1 bg-gradient-to-b from-blue-200 to-cyan-200 rounded-full"></div>
                         
                         <div className="space-y-4">
-                          {Object.entries(groupSlotsByDate(bike.availableSlots)).map(([date, slots]) => (
-                            <div key={date} className="relative">
-                              {/* Date Badge */}
-                              <div className="flex items-center mb-3 ml-2">
-                                <div className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg z-10">
-                                  {date}
+                          {Object.entries(groupSlotsByDate(bike.availableSlots)).map(([dateKey, slots]) => {
+                            // 获取完整的日期信息（包括星期）
+                            const firstSlot = slots[0];
+                            const dateInfo = formatDate(firstSlot.start_time);
+                            const dateLabel = `${dateInfo.date} ${dateInfo.weekday}`;
+                            
+                            return (
+                              <div key={dateKey} className="relative">
+                                {/* Date Badge */}
+                                <div className="flex items-center mb-3 ml-2">
+                                  <div className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg z-10">
+                                    {dateLabel}
+                                  </div>
                                 </div>
-                              </div>
-                              
-                              {/* Slots */}
-                              <div className="space-y-3">
-                                {slots.map((slot) => {
-                                  const isSelected = selectedSlot === slot.id && selectedType === 'bicycle';
+                                
+                                {/* Slots */}
+                                <div className="space-y-3">
+                                  {slots.map((slot) => {
+                                    const isSelected = selectedSlot === slot.id && selectedType === 'bicycle';
                                   return (
                                     <div
                                       key={slot.id}
@@ -425,11 +436,22 @@ export default function MyTimeSlotsPage() {
                                               {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
                                             </span>
                                           </div>
-                                          <div className={`px-3 py-1 rounded-full text-sm font-bold ${
-                                            isSelected ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'
-                                          }`}>
-                                            {formatDate(slot.start_time)}
-                                          </div>
+                                          {(() => {
+                                            const startDate = formatDate(slot.start_time);
+                                            const endDate = formatDate(slot.end_time);
+                                            const isCrossDay = startDate.date !== endDate.date;
+                                            
+                                            return (
+                                              <div className={`px-3 py-1 rounded-full text-sm font-bold ${
+                                                isSelected ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'
+                                              }`}>
+                                                {isCrossDay 
+                                                  ? `${startDate.date}${startDate.weekday} - ${endDate.date}${endDate.weekday}`
+                                                  : startDate.full
+                                                }
+                                              </div>
+                                            );
+                                          })()}
                                         </div>
                                         {isSelected && (
                                           <div className="flex items-center text-white font-bold">
@@ -443,7 +465,8 @@ export default function MyTimeSlotsPage() {
                                 })}
                               </div>
                             </div>
-                          ))}
+                          );
+                          })}
                         </div>
                       </div>
                     </div>
@@ -517,19 +540,25 @@ export default function MyTimeSlotsPage() {
                         <div className="absolute left-8 top-4 bottom-4 w-1 bg-gradient-to-b from-purple-200 to-pink-200 rounded-full"></div>
                         
                         <div className="space-y-4">
-                          {Object.entries(groupSlotsByDate(apt.availableSlots)).map(([date, slots]) => (
-                            <div key={date} className="relative">
-                              {/* Date Badge */}
-                              <div className="flex items-center mb-3 ml-2">
-                                <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg z-10">
-                                  {date}
+                          {Object.entries(groupSlotsByDate(apt.availableSlots)).map(([dateKey, slots]) => {
+                            // 获取完整的日期信息（包括星期）
+                            const firstSlot = slots[0];
+                            const dateInfo = formatDate(firstSlot.start_time);
+                            const dateLabel = `${dateInfo.date} ${dateInfo.weekday}`;
+                            
+                            return (
+                              <div key={dateKey} className="relative">
+                                {/* Date Badge */}
+                                <div className="flex items-center mb-3 ml-2">
+                                  <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg z-10">
+                                    {dateLabel}
+                                  </div>
                                 </div>
-                              </div>
-                              
-                              {/* Slots */}
-                              <div className="space-y-3">
-                                {slots.map((slot) => {
-                                  const isSelected = selectedSlot === slot.id && selectedType === 'appointment';
+                                
+                                {/* Slots */}
+                                <div className="space-y-3">
+                                  {slots.map((slot) => {
+                                    const isSelected = selectedSlot === slot.id && selectedType === 'appointment';
                                   return (
                                     <div
                                       key={slot.id}
@@ -558,11 +587,22 @@ export default function MyTimeSlotsPage() {
                                               {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
                                             </span>
                                           </div>
-                                          <div className={`px-3 py-1 rounded-full text-sm font-bold ${
-                                            isSelected ? 'bg-white/20 text-white' : 'bg-purple-50 text-purple-600'
-                                          }`}>
-                                            {formatDate(slot.start_time)}
-                                          </div>
+                                          {(() => {
+                                            const startDate = formatDate(slot.start_time);
+                                            const endDate = formatDate(slot.end_time);
+                                            const isCrossDay = startDate.date !== endDate.date;
+                                            
+                                            return (
+                                              <div className={`px-3 py-1 rounded-full text-sm font-bold ${
+                                                isSelected ? 'bg-white/20 text-white' : 'bg-purple-50 text-purple-600'
+                                              }`}>
+                                                {isCrossDay 
+                                                  ? `${startDate.date}${startDate.weekday} - ${endDate.date}${endDate.weekday}`
+                                                  : startDate.full
+                                                }
+                                              </div>
+                                            );
+                                          })()}
                                         </div>
                                         {isSelected && (
                                           <div className="flex items-center text-white font-bold">
@@ -576,7 +616,8 @@ export default function MyTimeSlotsPage() {
                                 })}
                               </div>
                             </div>
-                          ))}
+                          );
+                          })}
                         </div>
                       </div>
                     </div>

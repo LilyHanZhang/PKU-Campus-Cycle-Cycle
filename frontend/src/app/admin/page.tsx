@@ -170,21 +170,16 @@ export default function AdminDashboard() {
     // 创建多个时间段输入框
     const tempDiv = document.createElement('div');
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const minDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+    const minDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
     
     tempDiv.innerHTML = `
       <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 9999; max-height: 80vh; overflow-y: auto; min-width: 550px;">
         <h3 style="margin-bottom: 15px; font-size: 20px; font-weight: bold; color: #1f2937;">为卖家提出时间段</h3>
         <p style="margin-bottom: 15px; color: #6b7280; font-size: 14px; line-height: 1.6;">
           <strong>使用说明：</strong><br/>
-          1. 点击日期时间输入框，会弹出日期选择器<br/>
-          2. 选择日期后，在时间部分可以直接点击小时或分钟数字进行选择<br/>
-          3. 也可以直接在输入框中手动输入时间（格式：YYYY-MM-DD HH:MM）<br/>
+          1. 点击日期选择器选择日期（弹出日历）<br/>
+          2. 点击时间选择器选择时间（滑动选择小时和分钟）<br/>
+          3. 请为每个时间段选择开始和结束的日期时间<br/>
           4. 请至少提出 1 个时间段（可添加多个）
         </p>
         <div id="slotsContainer" style="max-height: 350px; overflow-y: auto; margin-bottom: 15px;"></div>
@@ -206,15 +201,29 @@ export default function AdminDashboard() {
       const slotDiv = document.createElement('div');
       slotDiv.className = 'slot-input';
       slotDiv.style.cssText = 'margin-bottom: 12px; padding: 12px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;';
+      
+      // 计算最小日期和时间
+      const now = new Date();
+      const minDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
+      const minTime = now.toTimeString().slice(0, 5); // HH:mm
+      
       slotDiv.innerHTML = `
         <div style="display: flex; gap: 12px; align-items: center;">
           <div style="flex: 1;">
+            <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">开始日期</label>
+            <input type="date" class="startDate" min="${minDate}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+          </div>
+          <div style="flex: 1;">
             <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">开始时间</label>
-            <input type="datetime-local" class="startTime" min="${minDateTime}" step="60" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+            <input type="time" class="startTime" min="00:00" max="23:59" step="60" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+          </div>
+          <div style="flex: 1;">
+            <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">结束日期</label>
+            <input type="date" class="endDate" min="${minDate}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
           </div>
           <div style="flex: 1;">
             <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">结束时间</label>
-            <input type="datetime-local" class="endTime" min="${minDateTime}" step="60" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+            <input type="time" class="endTime" min="00:00" max="23:59" step="60" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
           </div>
           ${slotCount > 1 ? '<button class="removeSlot" style="padding: 8px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold;">×</button>' : ''}
         </div>
@@ -250,51 +259,55 @@ export default function AdminDashboard() {
     cancelBtn?.addEventListener('click', cleanup);
 
     submitBtn?.addEventListener('click', async () => {
+      const startDateInputs = document.querySelectorAll('.startDate') as NodeListOf<HTMLInputElement>;
       const startTimeInputs = document.querySelectorAll('.startTime') as NodeListOf<HTMLInputElement>;
+      const endDateInputs = document.querySelectorAll('.endDate') as NodeListOf<HTMLInputElement>;
       const endTimeInputs = document.querySelectorAll('.endTime') as NodeListOf<HTMLInputElement>;
       
       const timeSlots = [];
       let hasError = false;
       
-      for (let i = 0; i < startTimeInputs.length; i++) {
+      for (let i = 0; i < startDateInputs.length; i++) {
+        const startDate = startDateInputs[i].value.trim();
         const startTime = startTimeInputs[i].value.trim();
+        const endDate = endDateInputs[i].value.trim();
         const endTime = endTimeInputs[i].value.trim();
         
-        console.log(`Slot ${i}: start="${startTime}", end="${endTime}"`);
+        console.log(`Slot ${i}: start date="${startDate}", start time="${startTime}", end date="${endDate}", end time="${endTime}"`);
         
         // 检查是否为空
-        if (!startTime || !endTime) {
-          alert("请填写所有时间段");
+        if (!startDate || !startTime || !endDate || !endTime) {
+          alert("请填写所有日期和时间");
           hasError = true;
           break;
         }
         
-        // 验证时间格式 - datetime-local 返回 "YYYY-MM-DDTHH:mm" 格式
-        const start = new Date(startTime);
-        const end = new Date(endTime);
+        // 组合日期和时间 - 日期格式 YYYY-MM-DD，时间格式 HH:mm
+        const startDateTime = new Date(`${startDate}T${startTime}`);
+        const endDateTime = new Date(`${endDate}T${endTime}`);
         
-        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-          alert("时间格式不正确，请重新选择时间");
+        if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+          alert("日期或时间格式不正确，请重新选择");
           hasError = true;
           break;
         }
         
-        if (start >= end) {
+        if (startDateTime >= endDateTime) {
           alert("开始时间必须早于结束时间");
           hasError = true;
           break;
         }
         
         // 验证时间不是过去的时间
-        if (start < new Date()) {
+        if (startDateTime < new Date()) {
           alert("开始时间不能是过去的时间");
           hasError = true;
           break;
         }
         
         timeSlots.push({
-          start_time: start.toISOString(),
-          end_time: end.toISOString()
+          start_time: startDateTime.toISOString(),
+          end_time: endDateTime.toISOString()
         });
       }
       

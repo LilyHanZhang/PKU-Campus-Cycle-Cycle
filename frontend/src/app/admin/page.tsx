@@ -236,15 +236,59 @@ export default function AdminDashboard() {
       slotDiv.className = 'slot-input';
       slotDiv.style.cssText = 'margin-bottom: 12px; padding: 12px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;';
       
-      // 计算最小日期和时间
+      // 计算当前北京时间
       const now = new Date();
-      const minDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
-      const minTime = now.toTimeString().slice(0, 5); // HH:mm
+      const utcYear = now.getUTCFullYear();
+      const utcMonth = now.getUTCMonth() + 1;
+      const utcDay = now.getUTCDate();
+      const utcHours = now.getUTCHours();
+      const utcMinutes = now.getUTCMinutes();
       
-      // 计算默认结束时间（当前时间 +1 小时）
-      const endDateTime = new Date(now.getTime() + 60 * 60 * 1000);
-      const defaultEndDate = endDateTime.toISOString().split('T')[0];
-      const defaultEndTime = endDateTime.toTimeString().slice(0, 5);
+      // 转换为北京时间（UTC+8）
+      let beijingHours = utcHours + 8;
+      let beijingDay = utcDay;
+      let beijingMonth = utcMonth;
+      let beijingYear = utcYear;
+      
+      if (beijingHours >= 24) {
+        beijingHours -= 24;
+        beijingDay += 1;
+        const daysInMonth = new Date(beijingYear, beijingMonth, 0).getDate();
+        if (beijingDay > daysInMonth) {
+          beijingDay = 1;
+          beijingMonth += 1;
+          if (beijingMonth > 12) {
+            beijingMonth = 1;
+            beijingYear += 1;
+          }
+        }
+      }
+      
+      const minDate = `${beijingYear}-${String(beijingMonth).padStart(2, '0')}-${String(beijingDay).padStart(2, '0')}`;
+      const minTime = `${String(beijingHours).padStart(2, '0')}:${String(utcMinutes).padStart(2, '0')}`;
+      
+      // 计算默认结束时间（当前北京时间 +1 小时）
+      let endBeijingHours = beijingHours + 1;
+      let endBeijingDay = beijingDay;
+      let endBeijingMonth = beijingMonth;
+      let endBeijingYear = beijingYear;
+      
+      if (endBeijingHours >= 24) {
+        endBeijingHours -= 24;
+        endBeijingDay += 1;
+        const daysInMonth = new Date(endBeijingYear, endBeijingMonth, 0).getDate();
+        if (endBeijingDay > daysInMonth) {
+          endBeijingDay = 1;
+          endBeijingMonth += 1;
+          if (endBeijingMonth > 12) {
+            endBeijingMonth = 1;
+            endBeijingYear += 1;
+          }
+        }
+      }
+      
+      const defaultEndDate = `${endBeijingYear}-${String(endBeijingMonth).padStart(2, '0')}-${String(endBeijingDay).padStart(2, '0')}`;
+      const defaultEndTime = `${String(endBeijingHours).padStart(2, '0')}:${String(utcMinutes).padStart(2, '0')}`;
       
       slotDiv.innerHTML = `
         <div style="display: flex; gap: 12px; align-items: center;">

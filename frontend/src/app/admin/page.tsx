@@ -207,23 +207,28 @@ export default function AdminDashboard() {
       const minDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
       const minTime = now.toTimeString().slice(0, 5); // HH:mm
       
+      // 计算默认结束时间（当前时间 +1 小时）
+      const endDateTime = new Date(now.getTime() + 60 * 60 * 1000);
+      const defaultEndDate = endDateTime.toISOString().split('T')[0];
+      const defaultEndTime = endDateTime.toTimeString().slice(0, 5);
+      
       slotDiv.innerHTML = `
         <div style="display: flex; gap: 12px; align-items: center;">
           <div style="flex: 1;">
             <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">开始日期</label>
-            <input type="date" class="startDate" min="${minDate}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+            <input type="date" class="startDate" min="${minDate}" value="${minDate}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
           </div>
           <div style="flex: 1;">
             <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">开始时间</label>
-            <input type="time" class="startTime" min="00:00" max="23:59" step="60" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+            <input type="time" class="startTime" min="00:00" max="23:59" step="60" value="${minTime}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
           </div>
           <div style="flex: 1;">
             <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">结束日期</label>
-            <input type="date" class="endDate" min="${minDate}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+            <input type="date" class="endDate" min="${minDate}" value="${defaultEndDate}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
           </div>
           <div style="flex: 1;">
             <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">结束时间</label>
-            <input type="time" class="endTime" min="00:00" max="23:59" step="60" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+            <input type="time" class="endTime" min="00:00" max="23:59" step="60" value="${defaultEndTime}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
           </div>
           ${slotCount > 1 ? '<button class="removeSlot" style="padding: 8px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold;">×</button>' : ''}
         </div>

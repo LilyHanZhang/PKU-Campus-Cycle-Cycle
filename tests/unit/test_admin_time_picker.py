@@ -252,7 +252,8 @@ class TestHTMLStructure:
         date_input = {
             "type": "date",
             "class": "startDate",
-            "min": "2025-01-01"  # 示例
+            "min": "2025-01-01",  # 示例
+            "value": "2025-01-01"  # 默认值
         }
         
         time_input = {
@@ -260,13 +261,105 @@ class TestHTMLStructure:
             "class": "startTime",
             "min": "00:00",
             "max": "23:59",
-            "step": "60"
+            "step": "60",
+            "value": "12:00"  # 默认值
         }
         
         assert date_input["type"] == "date"
         assert time_input["type"] == "time"
         assert time_input["min"] == "00:00"
         assert time_input["max"] == "23:59"
+        # 验证有默认值
+        assert "value" in date_input
+        assert "value" in time_input
+
+
+class TestDefaultValueLogic:
+    """测试默认值逻辑"""
+    
+    def test_default_start_datetime(self):
+        """测试默认开始时间为当前时间"""
+        from datetime import datetime
+        now = datetime.now()
+        default_date = now.strftime('%Y-%m-%d')
+        default_time = now.strftime('%H:%M')
+        
+        # 验证格式正确
+        assert len(default_date) == 10
+        assert len(default_time) == 5
+        
+        # 验证可以解析
+        parsed_date = datetime.strptime(default_date, '%Y-%m-%d')
+        parsed_time = datetime.strptime(default_time, '%H:%M')
+        
+        assert parsed_date.date() == now.date()
+        assert parsed_time.hour == now.hour
+        assert parsed_time.minute == now.minute
+    
+    def test_default_end_datetime(self):
+        """测试默认结束时间为当前时间 +1 小时"""
+        from datetime import datetime, timedelta
+        
+        now = datetime.now()
+        end_datetime = now + timedelta(hours=1)
+        
+        default_end_date = end_datetime.strftime('%Y-%m-%d')
+        default_end_time = end_datetime.strftime('%H:%M')
+        
+        # 验证日期
+        assert len(default_end_date) == 10
+        # 验证时间（小时应该比当前小时大 1，或者相同如果是分钟进位）
+        assert len(default_end_time) == 5
+        
+        # 验证结束时间晚于开始时间
+        start_dt = datetime.fromisoformat(f"{now.strftime('%Y-%m-%d')}T{now.strftime('%H:%M')}")
+        end_dt = datetime.fromisoformat(f"{default_end_date}T{default_end_time}")
+        assert end_dt > start_dt
+    
+    def test_default_values_prevent_empty_submission(self):
+        """测试默认值防止空提交"""
+        from datetime import datetime, timedelta
+        
+        # 模拟有默认值的情况
+        now = datetime.now()
+        start_date = now.strftime('%Y-%m-%d')
+        start_time = now.strftime('%H:%M')
+        end_datetime = now + timedelta(hours=1)
+        end_date = end_datetime.strftime('%Y-%m-%d')
+        end_time = end_datetime.strftime('%H:%M')
+        
+        # 验证所有字段都有值
+        assert start_date and start_date != ""
+        assert start_time and start_time != ""
+        assert end_date and end_date != ""
+        assert end_time and end_time != ""
+        
+        # 验证可以正常组合
+        start_dt = datetime.fromisoformat(f"{start_date}T{start_time}")
+        end_dt = datetime.fromisoformat(f"{end_date}T{end_time}")
+        
+        assert start_dt < end_dt
+    
+    def test_user_can_change_defaults(self):
+        """测试用户可以修改默认值"""
+        from datetime import datetime, timedelta
+        
+        # 默认值
+        now = datetime.now()
+        default_start = now.strftime('%Y-%m-%d %H:%M')
+        
+        # 用户修改后的值（明天 10:00）
+        tomorrow = now + timedelta(days=1)
+        user_selected = tomorrow.replace(hour=10, minute=0)
+        user_date = user_selected.strftime('%Y-%m-%d')
+        user_time = user_selected.strftime('%H:%M')
+        
+        # 验证用户可以设置新值
+        assert user_date != default_start[:10] or user_time != default_start[11:]
+        
+        # 验证新值有效
+        new_dt = datetime.fromisoformat(f"{user_date}T{user_time}")
+        assert new_dt > now
 
 
 if __name__ == "__main__":

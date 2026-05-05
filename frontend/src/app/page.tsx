@@ -35,6 +35,9 @@ const formatToBeijingTime = (isoString: string) => {
   const utcHours = date.getUTCHours();
   const utcMinutes = date.getUTCMinutes();
   
+  console.log('formatToBeijingTime 输入:', isoString);
+  console.log('解析的 UTC 时间:', `${utcYear}-${utcMonth}-${utcDay} ${utcHours}:${utcMinutes}`);
+  
   // 转换为北京时间（UTC+8）
   let beijingHours = utcHours + 8;
   let beijingDay = utcDay;
@@ -56,7 +59,10 @@ const formatToBeijingTime = (isoString: string) => {
     }
   }
   
-  return `${beijingYear}/${String(beijingMonth).padStart(2, '0')}/${String(beijingDay).padStart(2, '0')} ${String(beijingHours).padStart(2, '0')}:${String(utcMinutes).padStart(2, '0')}`;
+  const result = `${beijingYear}/${String(beijingMonth).padStart(2, '0')}/${String(beijingDay).padStart(2, '0')} ${String(beijingHours).padStart(2, '0')}:${String(utcMinutes).padStart(2, '0')}`;
+  console.log('转换后的北京时间:', result);
+  
+  return result;
 };
 
 export default function Home() {

@@ -25,6 +25,40 @@ import axios from "axios";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+// 将 ISO 时间转换为北京时间显示（UTC+8）
+const formatToBeijingTime = (isoString: string) => {
+  const date = new Date(isoString);
+  // 获取 UTC 时间
+  const utcYear = date.getUTCFullYear();
+  const utcMonth = date.getUTCMonth() + 1;
+  const utcDay = date.getUTCDate();
+  const utcHours = date.getUTCHours();
+  const utcMinutes = date.getUTCMinutes();
+  
+  // 转换为北京时间（UTC+8）
+  let beijingHours = utcHours + 8;
+  let beijingDay = utcDay;
+  let beijingMonth = utcMonth;
+  let beijingYear = utcYear;
+  
+  if (beijingHours >= 24) {
+    beijingHours -= 24;
+    beijingDay += 1;
+    // 处理月份和年份的进位
+    const daysInMonth = new Date(beijingYear, beijingMonth, 0).getDate();
+    if (beijingDay > daysInMonth) {
+      beijingDay = 1;
+      beijingMonth += 1;
+      if (beijingMonth > 12) {
+        beijingMonth = 1;
+        beijingYear += 1;
+      }
+    }
+  }
+  
+  return `${beijingYear}/${String(beijingMonth).padStart(2, '0')}/${String(beijingDay).padStart(2, '0')} ${String(beijingHours).padStart(2, '0')}:${String(utcMinutes).padStart(2, '0')}`;
+};
+
 export default function Home() {
   const { user, isAuthenticated, logout } = useAuth();
   const router = useRouter();
@@ -245,7 +279,7 @@ export default function Home() {
                               车辆 ID: {cd.bicycle_id.substring(0, 8)}...
                             </p>
                             <p className="text-xs text-blue-100">
-                              {new Date(cd.start_time).toLocaleString('zh-CN')}
+                              {formatToBeijingTime(cd.start_time)}
                             </p>
                           </div>
                           <div className="text-right">

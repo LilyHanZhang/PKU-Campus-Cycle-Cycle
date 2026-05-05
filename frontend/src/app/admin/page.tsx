@@ -22,6 +22,40 @@ import {
 // 生产环境 API 地址
 const API_URL = "https://pku-campus-cycle-cycle.onrender.com";
 
+// 将 ISO 时间转换为北京时间显示（UTC+8）
+const formatToBeijingTime = (isoString: string) => {
+  const date = new Date(isoString);
+  // 获取 UTC 时间
+  const utcYear = date.getUTCFullYear();
+  const utcMonth = date.getUTCMonth() + 1;
+  const utcDay = date.getUTCDate();
+  const utcHours = date.getUTCHours();
+  const utcMinutes = date.getUTCMinutes();
+  
+  // 转换为北京时间（UTC+8）
+  let beijingHours = utcHours + 8;
+  let beijingDay = utcDay;
+  let beijingMonth = utcMonth;
+  let beijingYear = utcYear;
+  
+  if (beijingHours >= 24) {
+    beijingHours -= 24;
+    beijingDay += 1;
+    // 处理月份和年份的进位
+    const daysInMonth = new Date(beijingYear, beijingMonth, 0).getDate();
+    if (beijingDay > daysInMonth) {
+      beijingDay = 1;
+      beijingMonth += 1;
+      if (beijingMonth > 12) {
+        beijingMonth = 1;
+        beijingYear += 1;
+      }
+    }
+  }
+  
+  return `${beijingYear}/${String(beijingMonth).padStart(2, '0')}/${String(beijingDay).padStart(2, '0')} ${String(beijingHours).padStart(2, '0')}:${String(utcMinutes).padStart(2, '0')}`;
+};
+
 // Countdown Timer Component
 function CountdownTimer({ slot }: { slot: any }) {
   const [timeLeft, setTimeLeft] = useState(slot.countdown_seconds);
@@ -69,7 +103,7 @@ function CountdownTimer({ slot }: { slot: any }) {
         <div>
           <div className="flex items-center space-x-2 mb-2">
             <Clock size={18} className={isUrgent ? 'text-red-500' : 'text-slate-400'} />
-            <p className="font-bold text-gray-800">时间段：{new Date(slot.start_time).toLocaleString('zh-CN')}</p>
+            <p className="font-bold text-gray-800">时间段：{formatToBeijingTime(slot.start_time)}</p>
           </div>
           <p className="text-sm text-gray-500 ml-7">
             类型：<span className={`font-bold ${

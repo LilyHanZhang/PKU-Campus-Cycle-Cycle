@@ -25,7 +25,12 @@ class UserResponse(UserBase):
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
+    email: Optional[EmailStr] = None
     avatar_url: Optional[str] = None
+
+class PasswordUpdate(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=6)
 
 class Token(BaseModel):
     access_token: str

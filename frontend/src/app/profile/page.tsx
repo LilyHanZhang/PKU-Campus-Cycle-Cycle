@@ -18,8 +18,10 @@ import {
   AlertCircle,
   ArrowRight,
   Sparkles,
-  Bell
+  Bell,
+  Edit3
 } from "lucide-react";
+import EditProfileModal from "@/components/EditProfileModal";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
@@ -45,6 +47,7 @@ export default function ProfilePage() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [myBookmarks, setMyBookmarks] = useState<Post[]>([]);
   const [activeTab, setActiveTab] = useState<'bikes' | 'appointments' | 'bookmarks'>('bikes');
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [stats, setStats] = useState({
     totalBikes: 0,
     pendingBikes: 0,
@@ -159,11 +162,36 @@ export default function ProfilePage() {
         <header className="mb-8">
           <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-xl p-6 md:p-8 border border-white/20">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <h1 className="text-4xl font-black text-gray-900 mb-2">个人中心</h1>
-                <p className="text-gray-600">管理您的车辆、预约和消息</p>
+              <div className="flex items-center space-x-4">
+                <img
+                  src={user.avatar_url || `https://ui-avatars.com/api/?name=${user.name}&background=10b981&color=fff`}
+                  alt="Avatar"
+                  className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg"
+                />
+                <div>
+                  <h1 className="text-4xl font-black text-gray-900 mb-2">{user.name}</h1>
+                  <p className="text-gray-600">{user.email}</p>
+                  {user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? (
+                    <span className="inline-flex items-center mt-1 px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold rounded-full">
+                      <Shield size={12} className="mr-1" />
+                      管理员
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center mt-1 px-3 py-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs font-bold rounded-full">
+                      <User size={12} className="mr-1" />
+                      普通用户
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-full font-bold hover:from-emerald-600 hover:to-emerald-700 transition-all flex items-center shadow-lg"
+                >
+                  <Edit3 className="w-5 h-5 mr-2" />
+                  编辑资料
+                </button>
                 <Link href="/">
                   <button className="px-6 py-3 bg-white border-2 border-blue-500 text-blue-600 rounded-full font-bold hover:bg-blue-50 transition-all flex items-center">
                     <ArrowRight className="w-5 h-5 mr-2 rotate-180" />
@@ -585,6 +613,14 @@ export default function ProfilePage() {
           </div>
         </section>
       </div>
+
+      {/* Edit Profile Modal */}
+      <EditProfileModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        user={user}
+        onUpdate={fetchData}
+      />
     </div>
   );
 }

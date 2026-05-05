@@ -146,20 +146,70 @@ export default function MyTimeSlotsPage() {
   };
 
   const formatDate = (isoString: string) => {
-    const date = new Date(isoString);
-    return date.toLocaleDateString('zh-CN', {
-      month: '2-digit',
-      day: '2-digit',
-      weekday: 'short'
-    });
+    // 如果时间字符串没有时区信息，强制视为 UTC
+    const date = new Date(isoString.endsWith('Z') ? isoString : isoString + 'Z');
+    // 获取 UTC 时间
+    const utcYear = date.getUTCFullYear();
+    const utcMonth = date.getUTCMonth() + 1;
+    const utcDay = date.getUTCDate();
+    const utcHours = date.getUTCHours();
+    const utcMinutes = date.getUTCMinutes();
+    
+    // 转换为北京时间（UTC+8）
+    let beijingHours = utcHours + 8;
+    let beijingDay = utcDay;
+    let beijingMonth = utcMonth;
+    let beijingYear = utcYear;
+    
+    if (beijingHours >= 24) {
+      beijingHours -= 24;
+      beijingDay += 1;
+      const daysInMonth = new Date(beijingYear, beijingMonth, 0).getDate();
+      if (beijingDay > daysInMonth) {
+        beijingDay = 1;
+        beijingMonth += 1;
+        if (beijingMonth > 12) {
+          beijingMonth = 1;
+          beijingYear += 1;
+        }
+      }
+    }
+    
+    const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+    const dateObj = new Date(`${beijingYear}-${String(beijingMonth).padStart(2, '0')}-${String(beijingDay).padStart(2, '0')}`);
+    const weekday = weekDays[dateObj.getUTCDay()];
+    
+    return `${String(beijingMonth).padStart(2, '0')}/${String(beijingDay).padStart(2, '0')}周${weekday}`;
   };
 
   const formatTime = (isoString: string) => {
-    const date = new Date(isoString);
-    return date.toLocaleTimeString('zh-CN', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    // 如果时间字符串没有时区信息，强制视为 UTC
+    const date = new Date(isoString.endsWith('Z') ? isoString : isoString + 'Z');
+    // 获取 UTC 时间
+    const utcHours = date.getUTCHours();
+    const utcMinutes = date.getUTCMinutes();
+    
+    // 转换为北京时间（UTC+8）
+    let beijingHours = utcHours + 8;
+    let beijingDay = date.getUTCDate();
+    let beijingMonth = date.getUTCMonth() + 1;
+    let beijingYear = date.getUTCFullYear();
+    
+    if (beijingHours >= 24) {
+      beijingHours -= 24;
+      beijingDay += 1;
+      const daysInMonth = new Date(beijingYear, beijingMonth, 0).getDate();
+      if (beijingDay > daysInMonth) {
+        beijingDay = 1;
+        beijingMonth += 1;
+        if (beijingMonth > 12) {
+          beijingMonth = 1;
+          beijingYear += 1;
+        }
+      }
+    }
+    
+    return `${String(beijingHours).padStart(2, '0')}:${String(utcMinutes).padStart(2, '0')}`;
   };
 
   const groupSlotsByDate = (slots: TimeSlot[]) => {

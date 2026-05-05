@@ -186,6 +186,19 @@ export default function AdminDashboard() {
         appointments: appointmentsRes.data.length,
         dashboard: dashboardRes.data
       });
+      
+      // 打印时间段的详细信息
+      if (dashboardRes.data && dashboardRes.data.time_slots) {
+        console.log('时间段数据:', dashboardRes.data.time_slots);
+        dashboardRes.data.time_slots.forEach((slot: any, index: number) => {
+          console.log(`时间段 ${index}:`, {
+            id: slot.id,
+            start_time: slot.start_time,
+            end_time: slot.end_time,
+            appointment_type: slot.appointment_type
+          });
+        });
+      }
       setPendingBikes(pendingRes.data);
       setAllUsers(usersRes.data);
       setAllBikes(bikesRes.data);

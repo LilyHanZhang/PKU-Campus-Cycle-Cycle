@@ -19,7 +19,8 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 // 将 ISO 时间转换为北京时间显示（UTC+8）
 const formatToBeijingTime = (isoString: string) => {
-  const date = new Date(isoString);
+  // 如果时间字符串没有时区信息，强制视为 UTC
+  const date = new Date(isoString.endsWith('Z') ? isoString : isoString + 'Z');
   // 获取 UTC 时间
   const utcYear = date.getUTCFullYear();
   const utcMonth = date.getUTCMonth() + 1;

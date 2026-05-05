@@ -366,8 +366,9 @@ export default function AdminDashboard() {
         }
         
         // 组合日期和时间 - 日期格式 YYYY-MM-DD，时间格式 HH:mm
-        const startDateTime = new Date(`${startDate}T${startTime}`);
-        const endDateTime = new Date(`${endDate}T${endTime}`);
+        // 将选择的时间视为北京时间（UTC+8）
+        const startDateTime = new Date(`${startDate}T${startTime}:00+08:00`);
+        const endDateTime = new Date(`${endDate}T${endTime}:00+08:00`);
         
         if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
           alert("日期或时间格式不正确，请重新选择");

@@ -22,6 +22,15 @@ export default function AnnouncementCarousel() {
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [showAll, setShowAll] = useState(false);
 
+  // 处理文件 URL，如果是相对路径则添加 API URL
+  const getFileUrl = (url?: string) => {
+    if (!url) return undefined;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return `${API_URL}${url}`;
+  };
+
   useEffect(() => {
     fetchAnnouncements();
   }, []);
@@ -91,11 +100,11 @@ export default function AnnouncementCarousel() {
                   </div>
                   <p className="text-gray-700 mb-3">{announcement.content}</p>
                   {announcement.image_url && (
-                    <img src={announcement.image_url} alt="" className="rounded-xl max-h-64 object-cover mb-3" />
+                    <img src={getFileUrl(announcement.image_url)} alt="" className="rounded-xl max-h-64 object-cover mb-3" />
                   )}
                   {announcement.attachment_url && (
                     <a
-                      href={announcement.attachment_url}
+                      href={getFileUrl(announcement.attachment_url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center text-emerald-600 hover:text-emerald-700 font-medium"
@@ -150,7 +159,7 @@ export default function AnnouncementCarousel() {
           {currentAnnouncement.image_url && (
             <div className="mb-4">
               <img
-                src={currentAnnouncement.image_url}
+                src={getFileUrl(currentAnnouncement.image_url)}
                 alt="公告图片"
                 className="rounded-2xl w-full h-48 md:h-64 object-cover shadow-lg"
               />
@@ -159,7 +168,7 @@ export default function AnnouncementCarousel() {
 
           {currentAnnouncement.attachment_url && (
             <a
-              href={currentAnnouncement.attachment_url}
+              href={getFileUrl(currentAnnouncement.attachment_url)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white px-4 py-2 rounded-full font-medium transition"

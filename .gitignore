@@ -45,3 +45,9 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+
+# 上传文件（保留目录结构，但不上传实际文件）
+uploads/announcements/images/*
+!uploads/announcements/images/.gitkeep
+uploads/announcements/attachments/*
+!uploads/announcements/attachments/.gitkeep

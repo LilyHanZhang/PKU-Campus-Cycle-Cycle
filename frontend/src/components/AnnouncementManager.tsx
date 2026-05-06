@@ -38,6 +38,15 @@ export default function AnnouncementManager({ onClose }: AnnouncementManagerProp
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
 
+  // 处理文件 URL，如果是相对路径则添加 API URL
+  const getFileUrl = (url?: string) => {
+    if (!url) return undefined;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return `${API_URL}${url}`;
+  };
+
   useEffect(() => {
     fetchAnnouncements();
   }, []);
@@ -256,7 +265,7 @@ export default function AnnouncementManager({ onClose }: AnnouncementManagerProp
                   {announcement.image_url && (
                     <div className="mb-3">
                       <img
-                        src={announcement.image_url}
+                        src={getFileUrl(announcement.image_url)}
                         alt="公告图片"
                         className="rounded-xl max-h-48 object-cover"
                       />
@@ -264,7 +273,7 @@ export default function AnnouncementManager({ onClose }: AnnouncementManagerProp
                   )}
                   {announcement.attachment_url && (
                     <a
-                      href={announcement.attachment_url}
+                      href={getFileUrl(announcement.attachment_url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center text-emerald-600 hover:text-emerald-700 font-medium"

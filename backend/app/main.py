@@ -115,8 +115,15 @@ app.include_router(messages.router)
 app.include_router(announcements.router)
 
 # 挂载静态文件目录用于图片上传
-uploads_dir = os.path.join(os.path.dirname(__file__), "uploads")
+# 使用项目根目录而不是 app 目录，确保部署时文件可访问
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+uploads_dir = os.path.join(project_root, "uploads")
 os.makedirs(uploads_dir, exist_ok=True)
+
+# 确保子目录也存在
+os.makedirs(os.path.join(uploads_dir, "announcements", "images"), exist_ok=True)
+os.makedirs(os.path.join(uploads_dir, "announcements", "attachments"), exist_ok=True)
+
 app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 @app.get("/")

@@ -202,3 +202,31 @@ class BookmarkResponse(BaseModel):
 
 class RoleUpdate(BaseModel):
     role: str = Field(..., pattern="^(USER|ADMIN|SUPER_ADMIN)$")
+
+class AnnouncementBase(BaseModel):
+    title: str = Field(..., max_length=200)
+    content: str
+    image_url: Optional[str] = None
+    attachment_url: Optional[str] = None
+    is_pinned: bool = False
+
+class AnnouncementCreate(AnnouncementBase):
+    pass
+
+class AnnouncementUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    image_url: Optional[str] = None
+    attachment_url: Optional[str] = None
+    is_pinned: Optional[bool] = None
+
+class AnnouncementResponse(AnnouncementBase):
+    id: UUID
+    author_id: UUID
+    author_name: Optional[str] = None
+    author_avatar_url: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True

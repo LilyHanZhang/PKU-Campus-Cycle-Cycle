@@ -9,7 +9,7 @@ import traceback
 from .database import engine, Base, SessionLocal
 from .models import User, Role
 from .auth import get_password_hash
-from .routers import users, bicycles, posts, time_slots, messages
+from .routers import users, bicycles, posts, time_slots, messages, announcements
 
 def create_super_admin():
     db = SessionLocal()
@@ -112,6 +112,7 @@ app.include_router(bicycles.appointment_router)
 app.include_router(posts.router)
 app.include_router(time_slots.router)
 app.include_router(messages.router)
+app.include_router(announcements.router)
 
 # 挂载静态文件目录用于图片上传
 uploads_dir = os.path.join(os.path.dirname(__file__), "uploads")

@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import AnnouncementCarousel from "@/components/AnnouncementCarousel";
 import { 
   LogOut, 
   Clock, 
@@ -263,6 +264,11 @@ export default function Home() {
                 使用说明
               </button>
             </div>
+          </section>
+
+          {/* Announcement Carousel */}
+          <section className="w-full mb-8">
+            <AnnouncementCarousel />
           </section>
 
           {/* Countdown Module */}

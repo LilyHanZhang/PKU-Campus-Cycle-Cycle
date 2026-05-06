@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import AnnouncementManager from "@/components/AnnouncementManager";
 import { 
   LayoutDashboard, 
   Truck, 
@@ -16,7 +17,8 @@ import {
   ChevronRight,
   Package,
   Timer,
-  UserCheck
+  UserCheck,
+  FileText
 } from "lucide-react";
 
 // 生产环境 API 地址
@@ -139,6 +141,7 @@ export default function AdminDashboard() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [showAnnouncementManager, setShowAnnouncementManager] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -871,6 +874,13 @@ export default function AdminDashboard() {
             <Calendar size={18} className="mr-2" />
             预约管理 ({allAppointments.length})
           </button>
+          <button
+            onClick={() => setShowAnnouncementManager(true)}
+            className="flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center text-gray-600 hover:bg-gray-50"
+          >
+            <FileText size={18} className="mr-2" />
+            公告管理
+          </button>
           <Link href="/history">
             <button className="flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 shadow-md flex items-center justify-center">
               <History size={18} className="mr-2" />
@@ -1281,6 +1291,10 @@ export default function AdminDashboard() {
           </>
         )}
       </div>
+      
+      {showAnnouncementManager && (
+        <AnnouncementManager onClose={() => setShowAnnouncementManager(false)} />
+      )}
     </div>
   );
 }

@@ -179,3 +179,18 @@ class Bookmark(Base):
     user = relationship("User")
 
 Post.bookmarks = relationship("Bookmark", back_populates="post", cascade="all, delete-orphan")
+
+class Announcement(Base):
+    __tablename__ = "announcements"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    title = Column(String(200), nullable=False)
+    content = Column(Text, nullable=False)
+    image_url = Column(Text)
+    attachment_url = Column(Text)
+    is_pinned = Column(Boolean, default=False)
+    author_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    author = relationship("User")

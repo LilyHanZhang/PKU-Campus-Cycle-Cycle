@@ -592,6 +592,12 @@ def propose_appointment_slots(
     print(f"DEBUG: 更新预约 {apt_id} 的 time_slot_id 为 {first_slot_id}")
     print(f"DEBUG: appointment.time_slot_id = {appointment.time_slot_id}")
     
+    # 更新自行车状态为等待买家选择时间段
+    bike = db.query(Bicycle).filter(Bicycle.id == appointment.bicycle_id).first()
+    if bike:
+        bike.status = BicycleStatus.PENDING_BUYER_SLOT_SELECTION.value
+        print(f"DEBUG: 更新自行车 {bike.id} 状态为 {bike.status}")
+    
     db.commit()
     db.refresh(appointment)
     

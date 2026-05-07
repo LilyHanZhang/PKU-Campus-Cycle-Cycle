@@ -1283,7 +1283,22 @@ export default function AdminDashboard() {
                 )}
 
                 {/* Appointments Without Time Slots (Delivery Reservation - 2.2) */}
-                {allAppointments.filter((apt: any) => apt.status === 'PENDING' && !apt.time_slot_id && apt.type === 'pick-up').length > 0 && (
+                {(() => {
+                  // 买家线：筛选状态为 PENDING 且自行车状态为 PENDING_BUYER_SLOT_SELECTION 的预约
+                  const pendingPickupAppointments = allAppointments.filter((apt: any) => {
+                    const bike: any = allBikes.find((b: any) => b.id === apt.bicycle_id);
+                    return apt.status === 'PENDING' && 
+                           apt.type === 'pick-up' && 
+                           bike && 
+                           bike.status === 'PENDING_BUYER_SLOT_SELECTION';
+                  });
+                  
+                  if (pendingPickupAppointments.length === 0) return null;
+                  
+                  console.log('=== 提车预约调试信息 ===');
+                  console.log('等待提出时间段的预约:', pendingPickupAppointments.length);
+                  
+                  return (
                   <div className="bg-white rounded-3xl shadow-xl p-6 border border-slate-100">
                     <div className="flex items-center mb-6">
                       <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center mr-3">
@@ -1292,21 +1307,7 @@ export default function AdminDashboard() {
                       <h2 className="text-2xl font-bold text-gray-800">⏰ 等待提出时间段的预约（买家已锁定）</h2>
                     </div>
                     <div className="space-y-3">
-                      {(() => {
-                        // 调试信息
-                        const pendingPickupAppointments = allAppointments.filter((apt: any) => 
-                          apt.status === 'PENDING' && !apt.time_slot_id && apt.type === 'pick-up'
-                        );
-                        console.log('=== 提车预约调试信息 ===');
-                        console.log('所有预约:', allAppointments.length);
-                        console.log('PENDING 状态的预约:', allAppointments.filter((apt: any) => apt.status === 'PENDING').length);
-                        console.log('PENDING + pick-up 类型的预约:', allAppointments.filter((apt: any) => apt.status === 'PENDING' && apt.type === 'pick-up').length);
-                        console.log('等待提出时间段的预约:', pendingPickupAppointments.length);
-                        pendingPickupAppointments.forEach((apt: any) => {
-                          console.log(`预约 ${apt.id.slice(0, 8)}: status=${apt.status}, time_slot_id=${apt.time_slot_id}, type=${apt.type}`);
-                        });
-                        
-                        return pendingPickupAppointments.map((apt: any) => (
+                      {pendingPickupAppointments.map((apt: any) => (
                         <div key={apt.id} className="p-5 bg-gradient-to-r from-cyan-50 to-cyan-100/50 rounded-2xl flex justify-between items-center hover:shadow-md transition-all">
                           <div className="flex-1">
                             <div className="flex items-center space-x-2 mb-2">
@@ -1330,11 +1331,11 @@ export default function AdminDashboard() {
                             <ChevronRight size={16} className="ml-1" />
                           </button>
                         </div>
-                      ));
-                      })()}
+                      ))}
                     </div>
                   </div>
-                )}
+                  );
+                })()}
 
                 {/* Pending Appointments List (old name for backward compatibility) - REMOVE THIS */}
                 {/* This old card is no longer needed as we have specific cards for each task */}

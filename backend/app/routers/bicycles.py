@@ -180,23 +180,11 @@ def propose_time_slots(
         )
         db.add(appointment)
     elif appointment and bike.status == BicycleStatus.IN_STOCK.value:
-        # 已有预约的场景（卖家流程已审核）
+        # 已有预约的场景
         # 根据预约类型反向设置时间段类型
         # drop-off = 卖家流程（卖家把车送来，管理员取车） -> 创建 pick-up 时间段
         # pick-up = 买家流程（买家来取车） -> 创建 drop-off 时间段
         appointment_type = "pick-up" if appointment.type == "drop-off" else "drop-off"
-    elif bike.status == BicycleStatus.IN_STOCK.value:
-        # 买家登记场景（无预约）
-        # 预约类型：pick-up（买家来取车）
-        # 时间段类型：drop-off（管理员送车/买家取车）
-        appointment_type = "drop-off"  # 时间段类型
-        appointment = Appointment(
-            user_id=bike.owner_id,
-            bicycle_id=bike_id,
-            type="pick-up",  # 预约类型：买家流程（买家取车）
-            status="PENDING"
-        )
-        db.add(appointment)
     elif bike.status in [BicycleStatus.PENDING_SELLER_SLOT_SELECTION.value, BicycleStatus.PENDING_BUYER_SLOT_SELECTION.value] and appointment:
         # 已有预约且已选择时间段的场景（重新提出时间段）
         # 根据预约类型反向设置时间段类型

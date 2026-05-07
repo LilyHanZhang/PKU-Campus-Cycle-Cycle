@@ -1053,7 +1053,7 @@ export default function AdminDashboard() {
                             }}
                             className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 font-bold shadow-md transition-all flex items-center"
                           >
-                            处理
+                            跳转
                             <ChevronRight size={16} className="ml-1" />
                           </button>
                         </div>
@@ -1097,8 +1097,8 @@ export default function AdminDashboard() {
                             }}
                             className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 font-bold shadow-md transition-all flex items-center"
                           >
-                            <CheckCircle size={18} className="mr-2" />
-                            确认时间段
+                            跳转
+                            <ChevronRight size={16} className="ml-1" />
                           </button>
                         </div>
                       ))}
@@ -1136,8 +1136,84 @@ export default function AdminDashboard() {
                             }}
                             className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 font-bold shadow-md transition-all flex items-center"
                           >
-                            <CheckCircle size={18} className="mr-2" />
-                            确认交易
+                            跳转
+                            <ChevronRight size={16} className="ml-1" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Reserved Bicycles List (Inventory Management - 1.5) */}
+                {allBikes.filter((bike: any) => bike.status === 'RESERVED').length > 0 && (
+                  <div className="bg-white rounded-3xl shadow-xl p-6 border border-slate-100">
+                    <div className="flex items-center mb-6">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mr-3">
+                        <Warehouse size={20} className="text-white" />
+                      </div>
+                      <h2 className="text-2xl font-bold text-gray-800">📦 等待入库的车辆（线下交易后确认）</h2>
+                    </div>
+                    <div className="space-y-3">
+                      {allBikes.filter((bike: any) => bike.status === 'RESERVED').map((bike: any) => (
+                        <div key={bike.id} className="p-5 bg-gradient-to-r from-purple-50 to-purple-100/50 rounded-2xl flex justify-between items-center hover:shadow-md transition-all">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <span className="px-3 py-1 bg-purple-200 text-purple-700 rounded-full text-xs font-bold">车辆</span>
+                              <p className="font-bold text-gray-800">车辆：{bike.brand}</p>
+                            </div>
+                            <div className="flex items-center space-x-4 text-sm text-gray-600">
+                              <span>状态：已预约</span>
+                              <span>ID: {bike.id.slice(0, 8)}...</span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setActiveTab("acquisition");
+                              setAcquisitionSubTab("inventory");
+                            }}
+                            className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 font-bold shadow-md transition-all flex items-center"
+                          >
+                            跳转
+                            <ChevronRight size={16} className="ml-1" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Confirmed Appointments List (Delivery Management - 2.5) */}
+                {allAppointments.filter((apt: any) => apt.status === 'CONFIRMED' && apt.type === 'pick-up').length > 0 && (
+                  <div className="bg-white rounded-3xl shadow-xl p-6 border border-slate-100">
+                    <div className="flex items-center mb-6">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center mr-3">
+                        <Handshake size={20} className="text-white" />
+                      </div>
+                      <h2 className="text-2xl font-bold text-gray-800">🤝 等待提车的预约（线下交易后确认）</h2>
+                    </div>
+                    <div className="space-y-3">
+                      {allAppointments.filter((apt: any) => apt.status === 'CONFIRMED' && apt.type === 'pick-up').map((apt: any) => (
+                        <div key={apt.id} className="p-5 bg-gradient-to-r from-orange-50 to-orange-100/50 rounded-2xl flex justify-between items-center hover:shadow-md transition-all">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <span className="px-3 py-1 bg-orange-200 text-orange-700 rounded-full text-xs font-bold">预约</span>
+                              <p className="font-bold text-gray-800">预约 ID: {apt.id.slice(0, 8)}...</p>
+                            </div>
+                            <div className="flex items-center space-x-4 text-sm text-gray-600">
+                              <span>状态：已确认</span>
+                              <span>类型：取车</span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setActiveTab("delivery");
+                              setDeliverySubTab("delivery_manage");
+                            }}
+                            className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 font-bold shadow-md transition-all flex items-center"
+                          >
+                            跳转
+                            <ChevronRight size={16} className="ml-1" />
                           </button>
                         </div>
                       ))}

@@ -71,9 +71,16 @@ export default function MyTimeSlotsPage() {
         b.status === 'PENDING_SELLER_SLOT_SELECTION'
       );
       
-      // 买家线：筛选 owner_id !== user.id 且 status = "PENDING_BUYER_SLOT_SELECTION" 的自行车
+      // 买家线：先查询预约，找到 user_id = user.id 且 status = "PENDING" 的预约
+      const appointmentsResponse = await axios.get(`${API_URL}/appointments/`, { headers });
+      const myAppointments = appointmentsResponse.data.filter((apt: any) => 
+        String(apt.user_id) === user.id && 
+        apt.status === 'PENDING'
+      );
+      
+      // 然后根据预约找到对应的自行车，且自行车状态是 PENDING_BUYER_SLOT_SELECTION
       const buyerBikes = bikesResponse.data.filter((b: any) => 
-        String(b.owner_id) !== user.id && 
+        myAppointments.some((apt: any) => apt.bicycle_id === b.id) &&
         b.status === 'PENDING_BUYER_SLOT_SELECTION'
       );
 

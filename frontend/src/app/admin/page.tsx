@@ -504,6 +504,54 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleUpdateStatus = async (bikeId: string) => {
+    const token = localStorage.getItem("access_token");
+    const newStatus = prompt(
+      "请输入新的状态值：\n" +
+      "PENDING_APPROVAL - 待审核\n" +
+      "IN_STOCK - 在库\n" +
+      "RESERVED - 已预约\n" +
+      "SOLD - 已售出\n" +
+      "PENDING_BUYER_SLOT_SELECTION - 等待买家选择时间段\n" +
+      "PENDING_SELLER_SLOT_SELECTION - 等待卖家选择时间段\n" +
+      "PENDING_ADMIN_CONFIRMATION_SELLER - 等待管理员确认 (卖家)\n" +
+      "PENDING_ADMIN_CONFIRMATION_BUYER - 等待管理员确认 (买家)\n" +
+      "PENDING_PICKUP - 等待取车"
+    );
+    if (!newStatus) return;
+    
+    try {
+      await axios.put(
+        `${API_URL}/bicycles/${bikeId}/status?new_status=${encodeURIComponent(newStatus.toUpperCase())}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("状态已更新");
+      fetchData();
+    } catch (err: any) {
+      console.error("Failed to update status", err);
+      alert(`操作失败：${err.response?.data?.detail || "请重试"}`);
+    }
+  };
+
+  const handleAdminDelete = async (bikeId: string) => {
+    const token = localStorage.getItem("access_token");
+    const reason = prompt("请输入删除理由（可选）：");
+    
+    try {
+      await axios.post(
+        `${API_URL}/bicycles/${bikeId}/admin-delete${reason ? `?reason=${encodeURIComponent(reason)}` : ''}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("自行车已删除");
+      fetchData();
+    } catch (err) {
+      console.error("Failed to delete bike", err);
+      alert("操作失败，请重试。");
+    }
+  };
+
   const handleUpdateRole = async (userId: string, newRole: string) => {
     const token = localStorage.getItem("access_token");
     try {
@@ -1208,6 +1256,7 @@ export default function AdminDashboard() {
                               }
                             </p>
                           </div>
+                          <div className="flex items-center space-x-2">
                           <span className={`px-3 py-1 text-xs font-bold rounded-full ${
                             bike.status === 'IN_STOCK' ? 'bg-green-100 text-green-700' :
                             bike.status === 'PENDING_APPROVAL' ? 'bg-yellow-100 text-yellow-700' :
@@ -1218,15 +1267,30 @@ export default function AdminDashboard() {
                           }`}>
                             {bike.status}
                           </span>
+                          <button
+                            onClick={() => handleUpdateStatus(bike.id)}
+                            className="bg-purple-500 text-white px-3 py-2 rounded-lg font-semibold hover:bg-purple-600 transition text-sm"
+                            title="直接修改自行车状态"
+                          >
+                            修改状态
+                          </button>
+                          <button
+                            onClick={() => handleAdminDelete(bike.id)}
+                            className="bg-red-500 text-white px-3 py-2 rounded-lg font-semibold hover:bg-red-600 transition text-sm"
+                            title="管理员删除自行车"
+                          >
+                            删除
+                          </button>
                           {bike.status === 'RESERVED' && (
                             <button
                               onClick={() => handleStoreInInventory(bike.id)}
-                              className="ml-2 bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition"
+                              className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition"
                               title="线下交易完成，将自行车存入库存"
                             >
                               ✓ 确认入库
                             </button>
                           )}
+                          </div>
                     </div>
                   ))}
                 </div>

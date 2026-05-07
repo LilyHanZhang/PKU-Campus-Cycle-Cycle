@@ -409,6 +409,80 @@ def reject_bicycle(
     
     return {"message": "已拒绝并删除"}
 
+@router.put("/{bike_id}/status", response_model=BicycleResponse)
+def update_bicycle_status(
+    bike_id: UUID,
+    new_status: str,
+    current_user: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """管理员直接修改自行车状态"""
+    bike = db.query(Bicycle).filter(Bicycle.id == bike_id).first()
+    if not bike:
+        raise HTTPException(status_code=404, detail="自行车不存在")
+    
+    # 验证状态值是否合法
+    valid_statuses = [
+        BicycleStatus.PENDING_APPROVAL.value,
+        BicycleStatus.IN_STOCK.value,
+        BicycleStatus.RESERVED.value,
+        BicycleStatus.SOLD.value,
+        BicycleStatus.PENDING_BUYER_SLOT_SELECTION.value,
+        BicycleStatus.PENDING_SELLER_SLOT_SELECTION.value,
+        BicycleStatus.PENDING_ADMIN_CONFIRMATION_SELLER.value,
+        BicycleStatus.PENDING_ADMIN_CONFIRMATION_BUYER.value,
+        BicycleStatus.PENDING_PICKUP.value
+    ]
+    
+    if new_status not in valid_statuses:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"无效的状态值。可选值：{', '.join(valid_statuses)}"
+        )
+    
+    bike.status = new_status
+    db.commit()
+    db.refresh(bike)
+    
+    return bike
+
+@router.post("/{bike_id}/admin-delete", response_model=dict)
+def admin_delete_bicycle(
+    bike_id: UUID,
+    reason: str = "",
+    current_user: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """管理员直接删除自行车（增强版，可指定理由）"""
+    bike = db.query(Bicycle).filter(Bicycle.id == bike_id).first()
+    if not bike:
+        raise HTTPException(status_code=404, detail="自行车不存在")
+
+    # 删除相关的时间段
+    from ..models import TimeSlot
+    db.query(TimeSlot).filter(TimeSlot.bicycle_id == bike_id).delete()
+    
+    # 删除自行车
+    db.delete(bike)
+    db.commit()
+    
+    # 发送私信通知卖家（如果有理由）
+    if reason:
+        try:
+            from ..routers.messages import send_message_to_user
+            from uuid import UUID
+            admin_id = UUID(current_user["user_id"]) if isinstance(current_user["user_id"], str) else current_user["user_id"]
+            send_message_to_user(
+                db=db,
+                sender_id=admin_id,
+                receiver_id=bike.owner_id,
+                content=f"管理员已删除您的自行车登记。原因：{reason}。自行车 ID: {bike_id}"
+            )
+        except Exception as e:
+            print(f"Failed to send notification: {e}")
+    
+    return {"message": "自行车已被管理员删除"}
+
 @router.delete("/{bike_id}")
 def delete_bicycle(
     bike_id: UUID,

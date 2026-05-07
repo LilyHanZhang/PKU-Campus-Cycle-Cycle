@@ -1451,13 +1451,13 @@ export default function AdminDashboard() {
                       这里显示需要管理员提出时间段的买家预约。点击"提出时间段"按钮，为买家选择提车时间。
                     </p>
                     <div className="space-y-4">
-                      {allAppointments.filter((apt: any) => apt.status === 'PENDING').map((apt: any) => (
+                      {allAppointments.filter((apt: any) => apt.status === 'PENDING' && !apt.time_slot_id && apt.type === 'pick-up').map((apt: any) => (
                         <div key={apt.id} className="p-4 bg-gray-50 rounded-lg">
                           <div className="flex justify-between items-center mb-2">
                             <div>
                               <p className="font-bold text-gray-800">预约 ID: {apt.id.slice(0, 8)}...</p>
                               <p className="text-sm text-gray-500">
-                                类型：{apt.type === 'pick-up' ? '取车' : '还车'} | 
+                                类型：取车 | 
                                 自行车 ID: {apt.bicycle_id?.slice(0, 8)}...
                               </p>
                             </div>
@@ -1470,6 +1470,9 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                       ))}
+                      {allAppointments.filter((apt: any) => apt.status === 'PENDING' && !apt.time_slot_id && apt.type === 'pick-up').length === 0 && (
+                        <p className="text-gray-500 text-center py-8">暂无待提出时间段的买家预约</p>
+                      )}
                     </div>
                   </div>
                 )}

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from typing import List, Optional
@@ -537,7 +537,7 @@ def create_appointment(
 @appointment_router.post("/{apt_id}/propose-slots", response_model=dict)
 def propose_appointment_slots(
     apt_id: UUID,
-    time_slots: List[dict],
+    time_slots: List[dict] = Body(...),
     current_user: dict = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):

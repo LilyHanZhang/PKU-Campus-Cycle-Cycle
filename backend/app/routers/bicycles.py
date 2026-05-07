@@ -575,7 +575,13 @@ def propose_appointment_slots(
     # 更新预约的 time_slot_id 为第一个时间段
     appointment.time_slot_id = first_slot_id
     
+    print(f"DEBUG: 更新预约 {apt_id} 的 time_slot_id 为 {first_slot_id}")
+    print(f"DEBUG: appointment.time_slot_id = {appointment.time_slot_id}")
+    
     db.commit()
+    db.refresh(appointment)
+    
+    print(f"DEBUG: commit 后 appointment.time_slot_id = {appointment.time_slot_id}")
     
     # 发送私信通知买家
     try:

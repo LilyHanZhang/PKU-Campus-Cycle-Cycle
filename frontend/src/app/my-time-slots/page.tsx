@@ -99,23 +99,27 @@ export default function MyTimeSlotsPage() {
         })
       );
 
-      const buyerBikesWithSlots = await Promise.all(
-        buyerBikes.map(async (bike: any) => {
+      // 买家线：同时保留预约和自行车信息
+      const buyerAppointmentsWithBikes = await Promise.all(
+        myAppointments.map(async (apt: any) => {
+          const bike = buyerBikes.find((b: any) => b.id === apt.bicycle_id);
+          if (!bike) return { ...apt, bike: null, availableSlots: [] };
+          
           try {
             const slotsResponse = await axios.get(
               `${API_URL}/time_slots/bicycle/${bike.id}`,
               { headers }
             );
-            return { ...bike, availableSlots: slotsResponse.data };
+            return { ...apt, bike, availableSlots: slotsResponse.data };
           } catch (error) {
             console.error(`Failed to fetch slots for bike ${bike.id}`, error);
-            return { ...bike, availableSlots: [] };
+            return { ...apt, bike, availableSlots: [] };
           }
         })
       );
 
       setPendingBicycles(bikesWithSlots);
-      setPendingAppointments(buyerBikesWithSlots);
+      setPendingAppointments(buyerAppointmentsWithBikes);
     } catch (error) {
       console.error("Failed to fetch data", error);
     } finally {
@@ -571,7 +575,7 @@ export default function MyTimeSlotsPage() {
                                     <div
                                       key={slot.id}
                                       onClick={() => {
-                                        if (apt.status !== 'PENDING') return;
+                                        if (!(apt as any).bike || (apt as any).bike.status !== 'PENDING_BUYER_SLOT_SELECTION') return;
                                         setSelectedSlot(slot.id);
                                         setSelectedType('appointment');
                                         setSelectedItem(apt);
@@ -580,7 +584,7 @@ export default function MyTimeSlotsPage() {
                                         isSelected
                                           ? 'bg-gradient-to-r from-purple-500 to-pink-500 border-purple-500 shadow-xl scale-105'
                                           : 'bg-white border-gray-200 hover:border-purple-400 hover:shadow-lg hover:scale-102'
-                                      } ${apt.status !== 'PENDING' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                      }`}
                                     >
                                       {/* Timeline Dot */}
                                       <div className={`absolute -left-10 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-4 ${

@@ -111,17 +111,29 @@ def get_bicycle_time_slots(
         if user_appointment:
             has_permission = True
     
-    # 买家线特殊处理：如果自行车状态是 PENDING_BUYER_SLOT_SELECTION，允许查看时间段
-    # 因为买家线的预约 user_id 是卖家 ID，不是买家 ID
+    # 买家线特殊处理：如果自行车状态是 PENDING_BUYER_SLOT_SELECTION，
+    # 检查当前用户是否是预约的接收者（通过查询所有 PENDING 状态的预约）
     if not has_permission and bicycle.status == "PENDING_BUYER_SLOT_SELECTION":
-        # 检查当前用户是否有该自行车的预约（通过 bicycle_id 和 status 判断）
-        buyer_appointment = db.query(Appointment).filter(
+        # 查询该自行车的所有待处理预约
+        all_appointments = db.query(Appointment).filter(
             Appointment.bicycle_id == bike_id,
             Appointment.status == "PENDING"
-        ).first()
-        if buyer_appointment:
+        ).all()
+        
+        # 检查是否有预约的 user_id 是当前用户，或者自行车状态是 PENDING_BUYER_SLOT_SELECTION
+        for apt in all_appointments:
+            if apt.user_id == current_user_id:
+                has_permission = True
+                user_appointment = apt
+                break
+        
+        # 如果还是没有权限，但自行车状态是 PENDING_BUYER_SLOT_SELECTION，
+        # 说明是管理员直接提出时间段的场景，允许查看
+        if not has_permission:
             has_permission = True
-            user_appointment = buyer_appointment
+            # 取第一个预约作为 user_appointment（用于时间段类型判断）
+            if all_appointments:
+                user_appointment = all_appointments[0]
     
     if not has_permission:
         raise HTTPException(status_code=403, detail="无权限查看")

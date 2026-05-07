@@ -588,19 +588,26 @@ export default function AdminDashboard() {
   const handleProposeAppointmentSlots = async (aptId: string) => {
     const token = localStorage.getItem("access_token");
     
-    // 创建时间段输入界面（与卖家线一致）
+    // 创建多个时间段输入框（与卖家线一致）
     const tempDiv = document.createElement('div');
+    const now = new Date();
+    const minDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    
     tempDiv.innerHTML = `
-      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); z-index: 9999; max-height: 80vh; overflow-y: auto; min-width: 700px; max-width: 900px;">
-        <h3 style="margin-bottom: 20px; font-size: 24px; font-weight: bold; color: #1f2937; text-align: center;">为买家预约提出时间段</h3>
-        <p style="margin-bottom: 20px; color: #6b7280; font-size: 14px; line-height: 1.6; text-align: center;">
-          <strong>操作说明：</strong>点击日期或时间进行选择，可添加多个时间段，最后点击"提交"按钮
+      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 9999; max-height: 80vh; overflow-y: auto; min-width: 550px;">
+        <h3 style="margin-bottom: 15px; font-size: 20px; font-weight: bold; color: #1f2937;">为买家提出时间段</h3>
+        <p style="margin-bottom: 15px; color: #6b7280; font-size: 14px; line-height: 1.6;">
+          <strong>使用说明：</strong><br/>
+          1. 点击日期选择器选择日期（弹出日历）<br/>
+          2. 点击时间选择器选择时间（滑动选择小时和分钟）<br/>
+          3. 请为每个时间段选择开始和结束的日期时间<br/>
+          4. 请至少提出 1 个时间段（可添加多个）
         </p>
-        <div id="slotsContainer" style="max-height: 500px; overflow-y: auto; margin-bottom: 20px;"></div>
-        <button id="addSlotBtn" style="width: 100%; padding: 14px; background: linear-gradient(to right, #3b82f6, #06b6d4); color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 16px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">+ 添加时间段</button>
-        <div style="display: flex; gap: 15px;">
-          <button id="submitBtn" style="flex: 1; padding: 14px; background: linear-gradient(to right, #10b981, #059669); color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">提交</button>
-          <button id="cancelBtn" style="flex: 1; padding: 14px; background: linear-gradient(to right, #ef4444, #dc2626); color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">取消</button>
+        <div id="slotsContainer" style="max-height: 350px; overflow-y: auto; margin-bottom: 15px;"></div>
+        <button id="addSlotBtn" style="width: 100%; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: 600;">+ 添加时间段</button>
+        <div style="display: flex; gap: 10px;">
+          <button id="submitBtn" style="flex: 1; padding: 12px; background: #2ab26a; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">提交</button>
+          <button id="cancelBtn" style="flex: 1; padding: 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">取消</button>
         </div>
       </div>
       <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9998;"></div>
@@ -614,67 +621,91 @@ export default function AdminDashboard() {
       slotCount++;
       const slotDiv = document.createElement('div');
       slotDiv.className = 'slot-input';
-      slotDiv.style.cssText = 'margin-bottom: 16px; padding: 20px; background: #f9fafb; border-radius: 12px; border: 2px solid #e5e7eb;';
+      slotDiv.style.cssText = 'margin-bottom: 12px; padding: 12px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;';
       
-      // 时间段标题
-      const titleDiv = document.createElement('div');
-      titleDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;';
-      titleDiv.innerHTML = `
-        <span style="font-size: 16px; font-weight: bold; color: #374151;">时间段 ${slotCount}</span>
-        ${slotCount > 1 ? '<button class="removeSlot" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold;">删除</button>' : ''}
+      // 计算当前北京时间
+      const now = new Date();
+      const utcYear = now.getUTCFullYear();
+      const utcMonth = now.getUTCMonth() + 1;
+      const utcDay = now.getUTCDate();
+      const utcHours = now.getUTCHours();
+      const utcMinutes = now.getUTCMinutes();
+      
+      // 转换为北京时间（UTC+8）
+      let beijingHours = utcHours + 8;
+      let beijingDay = utcDay;
+      let beijingMonth = utcMonth;
+      let beijingYear = utcYear;
+      
+      if (beijingHours >= 24) {
+        beijingHours -= 24;
+        beijingDay += 1;
+        const daysInMonth = new Date(beijingYear, beijingMonth, 0).getDate();
+        if (beijingDay > daysInMonth) {
+          beijingDay = 1;
+          beijingMonth += 1;
+          if (beijingMonth > 12) {
+            beijingMonth = 1;
+            beijingYear += 1;
+          }
+        }
+      }
+      
+      const minDate = `${beijingYear}-${String(beijingMonth).padStart(2, '0')}-${String(beijingDay).padStart(2, '0')}`;
+      const minTime = `${String(beijingHours).padStart(2, '0')}:${String(utcMinutes).padStart(2, '0')}`;
+      
+      // 计算默认结束时间（当前北京时间 +1 小时）
+      let endBeijingHours = beijingHours + 1;
+      let endBeijingDay = beijingDay;
+      let endBeijingMonth = beijingMonth;
+      let endBeijingYear = beijingYear;
+      
+      if (endBeijingHours >= 24) {
+        endBeijingHours -= 24;
+        endBeijingDay += 1;
+        const daysInMonth = new Date(endBeijingYear, endBeijingMonth, 0).getDate();
+        if (endBeijingDay > daysInMonth) {
+          endBeijingDay = 1;
+          endBeijingMonth += 1;
+          if (endBeijingMonth > 12) {
+            endBeijingMonth = 1;
+            endBeijingYear += 1;
+          }
+        }
+      }
+      
+      const defaultEndDate = `${endBeijingYear}-${String(endBeijingMonth).padStart(2, '0')}-${String(endBeijingDay).padStart(2, '0')}`;
+      const defaultEndTime = `${String(endBeijingHours).padStart(2, '0')}:${String(utcMinutes).padStart(2, '0')}`;
+      
+      slotDiv.innerHTML = `
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <div style="flex: 1;">
+            <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">开始日期</label>
+            <input type="date" class="startDate" min="${minDate}" value="${minDate}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+          </div>
+          <div style="flex: 1;">
+            <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">开始时间</label>
+            <input type="time" class="startTime" min="00:00" max="23:59" step="60" value="${minTime}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+          </div>
+          <div style="flex: 1;">
+            <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">结束日期</label>
+            <input type="date" class="endDate" min="${minDate}" value="${defaultEndDate}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+          </div>
+          <div style="flex: 1;">
+            <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">结束时间</label>
+            <input type="time" class="endTime" min="00:00" max="23:59" step="60" value="${defaultEndTime}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+          </div>
+          ${slotCount > 1 ? '<button class="removeSlot" style="padding: 8px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold;">×</button>' : ''}
+        </div>
       `;
-      slotDiv.appendChild(titleDiv);
-      
-      // 时间输入容器
-      const timeContainer = document.createElement('div');
-      timeContainer.style.cssText = 'display: flex; gap: 16px; align-items: center;';
-      
-      // 开始时间
-      const startDiv = document.createElement('div');
-      startDiv.style.cssText = 'flex: 1;';
-      startDiv.innerHTML = `
-        <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: #374151;">开始时间</label>
-        <input type="datetime-local" class="startTime" style="width: 100%; padding: 12px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 15px; transition: border-color 0.2s;" />
-      `;
-      timeContainer.appendChild(startDiv);
-      
-      // 分隔符
-      const separator = document.createElement('div');
-      separator.style.cssText = 'font-size: 24px; color: #9ca3af; font-weight: bold; margin-top: 28px;';
-      separator.textContent = '→';
-      timeContainer.appendChild(separator);
-      
-      // 结束时间
-      const endDiv = document.createElement('div');
-      endDiv.style.cssText = 'flex: 1;';
-      endDiv.innerHTML = `
-        <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: #374151;">结束时间</label>
-        <input type="datetime-local" class="endTime" style="width: 100%; padding: 12px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 15px; transition: border-color 0.2s;" />
-      `;
-      timeContainer.appendChild(endDiv);
-      
-      slotDiv.appendChild(timeContainer);
       slotsContainer.appendChild(slotDiv);
 
-      // 删除按钮事件
+      // 移除按钮事件
       const removeBtn = slotDiv.querySelector('.removeSlot') as HTMLElement;
       if (removeBtn) {
         removeBtn.addEventListener('click', () => {
           if (slotsContainer.children.length > 1) {
             slotsContainer.removeChild(slotDiv);
-            // 重新编号
-            Array.from(slotsContainer.children).forEach((child, index) => {
-              const title = child.querySelector('span') as HTMLElement;
-              if (title) {
-                title.textContent = `时间段 ${index + 1}`;
-              }
-              const removeButton = child.querySelector('.removeSlot') as HTMLElement;
-              if (removeButton && index === 0) {
-                removeButton.remove();
-              } else if (removeButton && index > 0) {
-                removeButton.style.display = 'block';
-              }
-            });
           } else {
             alert("至少需要一个时间段");
           }
@@ -682,6 +713,7 @@ export default function AdminDashboard() {
       }
     };
 
+    // 添加第一个时间段
     addSlotInput();
 
     const addSlotBtn = document.getElementById('addSlotBtn');
@@ -697,49 +729,53 @@ export default function AdminDashboard() {
     cancelBtn?.addEventListener('click', cleanup);
 
     submitBtn?.addEventListener('click', async () => {
+      const startDateInputs = document.querySelectorAll('.startDate') as NodeListOf<HTMLInputElement>;
       const startTimeInputs = document.querySelectorAll('.startTime') as NodeListOf<HTMLInputElement>;
+      const endDateInputs = document.querySelectorAll('.endDate') as NodeListOf<HTMLInputElement>;
       const endTimeInputs = document.querySelectorAll('.endTime') as NodeListOf<HTMLInputElement>;
       
       const timeSlots = [];
       let hasError = false;
       
-      for (let i = 0; i < startTimeInputs.length; i++) {
+      for (let i = 0; i < startDateInputs.length; i++) {
+        const startDate = startDateInputs[i].value.trim();
         const startTime = startTimeInputs[i].value.trim();
+        const endDate = endDateInputs[i].value.trim();
         const endTime = endTimeInputs[i].value.trim();
         
         // 检查是否为空
-        if (!startTime || !endTime) {
-          alert("请填写所有时间段");
+        if (!startDate || !startTime || !endDate || !endTime) {
+          alert("请填写所有日期和时间");
           hasError = true;
           break;
         }
         
-        // 验证时间格式 - datetime-local 返回 "YYYY-MM-DDTHH:mm" 格式
-        const start = new Date(startTime);
-        const end = new Date(endTime);
+        // 合并日期和时间
+        const startDateTime = new Date(`${startDate}T${startTime}`);
+        const endDateTime = new Date(`${endDate}T${endTime}`);
         
-        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-          alert("时间格式不正确，请重新选择时间");
+        if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+          alert("日期或时间格式不正确，请重新选择");
           hasError = true;
           break;
         }
         
-        if (start >= end) {
+        if (startDateTime >= endDateTime) {
           alert("开始时间必须早于结束时间");
           hasError = true;
           break;
         }
         
         // 验证时间不是过去的时间
-        if (start < new Date()) {
+        if (startDateTime < new Date()) {
           alert("开始时间不能是过去的时间");
           hasError = true;
           break;
         }
         
         timeSlots.push({
-          start_time: start.toISOString(),
-          end_time: end.toISOString()
+          start_time: startDateTime.toISOString(),
+          end_time: endDateTime.toISOString()
         });
       }
       

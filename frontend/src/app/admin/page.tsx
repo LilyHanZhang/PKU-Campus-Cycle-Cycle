@@ -734,6 +734,10 @@ export default function AdminDashboard() {
       const endDateInputs = document.querySelectorAll('.endDate') as NodeListOf<HTMLInputElement>;
       const endTimeInputs = document.querySelectorAll('.endTime') as NodeListOf<HTMLInputElement>;
       
+      console.log('=== 提交时间段前的调试 ===');
+      console.log('startDateInputs 数量:', startDateInputs.length);
+      console.log('startTimeInputs 数量:', startTimeInputs.length);
+      
       const timeSlots = [];
       let hasError = false;
       
@@ -742,6 +746,8 @@ export default function AdminDashboard() {
         const startTime = startTimeInputs[i].value.trim();
         const endDate = endDateInputs[i].value.trim();
         const endTime = endTimeInputs[i].value.trim();
+        
+        console.log(`时间段 ${i}:`, { startDate, startTime, endDate, endTime });
         
         // 检查是否为空
         if (!startDate || !startTime || !endDate || !endTime) {
@@ -779,21 +785,28 @@ export default function AdminDashboard() {
         });
       }
       
+      console.log('生成的 timeSlots:', timeSlots);
+      
       if (hasError || timeSlots.length === 0) {
+        console.log('验证失败，未提交');
         return;
       }
 
+      console.log('准备提交到 API:', `${API_URL}/appointments/${aptId}/propose-slots`);
+      
       try {
-        await axios.post(
+        const response = await axios.post(
           `${API_URL}/appointments/${aptId}/propose-slots`,
           timeSlots,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         
+        console.log('API 响应:', response.data);
         alert(`✓ 已提出 ${timeSlots.length} 个时间段，等待买家选择！`);
         cleanup();
         fetchData();
       } catch (err: any) {
+        console.error('API 错误:', err);
         alert(`操作失败：${err.response?.data?.detail || "请重试"}`);
       }
     });

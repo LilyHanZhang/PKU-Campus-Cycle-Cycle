@@ -183,33 +183,46 @@ export default function AdminDashboard() {
 
     try {
       console.log('Fetching admin dashboard data...');
-      const [pendingRes, usersRes, bikesRes, appointmentsRes, dashboardRes] = await Promise.all([
+      
+      // 并行获取基础数据
+      const [pendingRes, usersRes, bikesRes, appointmentsRes] = await Promise.all([
         axios.get(`${API_URL}/bicycles/?status=PENDING_APPROVAL`, { headers }),
         axios.get(`${API_URL}/users/`, { headers }),
         axios.get(`${API_URL}/bicycles/`, { headers }),
         axios.get(`${API_URL}/appointments/`, { headers }),
-        axios.get(`${API_URL}/bicycles/admin/dashboard`, { headers }),
       ]);
-      console.log('Dashboard data loaded:', {
-        pending: pendingRes.data.length,
-        users: usersRes.data.length,
-        bikes: bikesRes.data.length,
-        appointments: appointmentsRes.data.length,
-        dashboard: dashboardRes.data
-      });
       
-      // 打印时间段的详细信息
-      if (dashboardRes.data && dashboardRes.data.time_slots) {
-        console.log('时间段数据:', dashboardRes.data.time_slots);
-        dashboardRes.data.time_slots.forEach((slot: any, index: number) => {
-          console.log(`时间段 ${index}:`, {
-            id: slot.id,
-            start_time: slot.start_time,
-            end_time: slot.end_time,
-            appointment_type: slot.appointment_type
+      console.log('基础数据加载完成');
+      
+      // 单独获取仪表盘数据（失败不影响其他功能）
+      let dashboardData = null;
+      try {
+        const dashboardRes = await axios.get(`${API_URL}/bicycles/admin/dashboard`, { headers });
+        dashboardData = dashboardRes.data;
+        console.log('仪表盘数据加载完成:', dashboardData);
+        
+        // 打印时间段的详细信息
+        if (dashboardData && dashboardData.time_slots) {
+          console.log('时间段数据:', dashboardData.time_slots);
+          dashboardData.time_slots.forEach((slot: any, index: number) => {
+            console.log(`时间段 ${index}:`, {
+              id: slot.id,
+              start_time: slot.start_time,
+              end_time: slot.end_time,
+              appointment_type: slot.appointment_type
+            });
           });
-        });
+        }
+      } catch (dashboardErr: any) {
+        console.error('仪表盘数据加载失败（不影响其他功能）:', dashboardErr.message);
+        // 使用默认值
+        dashboardData = {
+          pending_bicycles_count: pendingRes.data.length,
+          waiting_appointments: [],
+          time_slots: []
+        };
       }
+      
       setPendingBikes(pendingRes.data);
       setAllUsers(usersRes.data);
       setAllBikes(bikesRes.data);
@@ -218,7 +231,7 @@ export default function AdminDashboard() {
         apt.status === 'PENDING' || apt.status === 'CONFIRMED'
       );
       setAllAppointments(activeAppointments);
-      setDashboardData(dashboardRes.data);
+      setDashboardData(dashboardData);
     } catch (err: any) {
       console.error("Failed to fetch data", err);
       console.error("Error response:", err.response?.data);

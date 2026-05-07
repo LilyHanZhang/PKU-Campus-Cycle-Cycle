@@ -71,12 +71,10 @@ export default function MyTimeSlotsPage() {
         b.status === 'PENDING_SELLER_SLOT_SELECTION'
       );
       
-      const appointmentsResponse = await axios.get(`${API_URL}/appointments/user/${user.id}`, { headers });
-      // 买家线：筛选 type = "pick-up" 的预约（买家取车）
-      const myAppointments = appointmentsResponse.data.filter((apt: any) => 
-        apt.type === 'pick-up' &&
-        (apt.status === 'PENDING' || apt.status === 'CONFIRMED') &&
-        !apt.time_slot_id
+      // 买家线：筛选 owner_id !== user.id 且 status = "PENDING_BUYER_SLOT_SELECTION" 的自行车
+      const buyerBikes = bikesResponse.data.filter((b: any) => 
+        String(b.owner_id) !== user.id && 
+        b.status === 'PENDING_BUYER_SLOT_SELECTION'
       );
 
       const bikesWithSlots = await Promise.all(
@@ -94,23 +92,23 @@ export default function MyTimeSlotsPage() {
         })
       );
 
-      const appointmentsWithSlots = await Promise.all(
-        myAppointments.map(async (apt: any) => {
+      const buyerBikesWithSlots = await Promise.all(
+        buyerBikes.map(async (bike: any) => {
           try {
             const slotsResponse = await axios.get(
-              `${API_URL}/time_slots/appointment/${apt.id}`,
+              `${API_URL}/time_slots/bicycle/${bike.id}`,
               { headers }
             );
-            return { ...apt, availableSlots: slotsResponse.data };
+            return { ...bike, availableSlots: slotsResponse.data };
           } catch (error) {
-            console.error(`Failed to fetch slots for appointment ${apt.id}`, error);
-            return { ...apt, availableSlots: [] };
+            console.error(`Failed to fetch slots for bike ${bike.id}`, error);
+            return { ...bike, availableSlots: [] };
           }
         })
       );
 
       setPendingBicycles(bikesWithSlots);
-      setPendingAppointments(appointmentsWithSlots);
+      setPendingAppointments(buyerBikesWithSlots);
     } catch (error) {
       console.error("Failed to fetch data", error);
     } finally {

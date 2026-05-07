@@ -549,6 +549,8 @@ def propose_appointment_slots(
     if appointment.status != AppointmentStatus.PENDING.value:
         raise HTTPException(status_code=400, detail="预约状态不正确")
     
+    print(f"DEBUG: 接收到的 time_slots: {time_slots}")
+    
     from ..models import TimeSlot
     from datetime import datetime
     
@@ -556,6 +558,7 @@ def propose_appointment_slots(
     created_slots = []
     first_slot_id = None
     for slot_data in time_slots:
+        print(f"DEBUG: 处理时间段：{slot_data}")
         time_slot = TimeSlot(
             bicycle_id=appointment.bicycle_id,
             appointment_type=appointment.type,  # 买家取车
@@ -571,6 +574,8 @@ def propose_appointment_slots(
             "start_time": slot_data["start_time"],
             "end_time": slot_data["end_time"]
         })
+    
+    print(f"DEBUG: 创建了 {len(created_slots)} 个时间段，first_slot_id: {first_slot_id}")
     
     # 更新预约的 time_slot_id 为第一个时间段
     appointment.time_slot_id = first_slot_id

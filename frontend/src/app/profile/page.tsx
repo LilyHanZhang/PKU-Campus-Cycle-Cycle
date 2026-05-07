@@ -78,8 +78,9 @@ export default function ProfilePage() {
     ).length;
     
     const totalAppointments = myAppointments.length;
+    // 只有当预约状态为 PENDING 且有时间段 ID 时，才表示需要买家选择时间段
     const pendingAppointments = myAppointments.filter((a: any) => 
-      a.status === 'PENDING' && !a.time_slot_id
+      a.status === 'PENDING' && a.time_slot_id
     ).length;
     const completedAppointments = myAppointments.filter((a: any) => 
       a.status === 'COMPLETED'

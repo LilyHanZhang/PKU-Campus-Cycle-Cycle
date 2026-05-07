@@ -554,6 +554,7 @@ def propose_appointment_slots(
     
     # 创建时间段
     created_slots = []
+    first_slot_id = None
     for slot_data in time_slots:
         time_slot = TimeSlot(
             bicycle_id=appointment.bicycle_id,
@@ -563,11 +564,16 @@ def propose_appointment_slots(
             is_booked="false"
         )
         db.add(time_slot)
+        if first_slot_id is None:
+            first_slot_id = time_slot.id
         created_slots.append({
             "id": str(time_slot.id),
             "start_time": slot_data["start_time"],
             "end_time": slot_data["end_time"]
         })
+    
+    # 更新预约的 time_slot_id 为第一个时间段
+    appointment.time_slot_id = first_slot_id
     
     db.commit()
     

@@ -65,13 +65,16 @@ export default function MyTimeSlotsPage() {
 
     try {
       const bikesResponse = await axios.get(`${API_URL}/bicycles/`, { headers });
+      // 卖家线：筛选 owner_id = user.id 且 status = "PENDING_SELLER_SLOT_SELECTION" 的自行车
       const myBikes = bikesResponse.data.filter((b: any) => 
         String(b.owner_id) === user.id && 
-        (b.status === 'PENDING_SELLER_SLOT_SELECTION' || b.status === 'PENDING_APPROVAL')
+        b.status === 'PENDING_SELLER_SLOT_SELECTION'
       );
       
       const appointmentsResponse = await axios.get(`${API_URL}/appointments/user/${user.id}`, { headers });
+      // 买家线：筛选 type = "pick-up" 的预约（买家取车）
       const myAppointments = appointmentsResponse.data.filter((apt: any) => 
+        apt.type === 'pick-up' &&
         (apt.status === 'PENDING' || apt.status === 'CONFIRMED') &&
         !apt.time_slot_id
       );

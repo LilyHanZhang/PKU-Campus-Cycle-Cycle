@@ -18,7 +18,12 @@ import {
   Package,
   Timer,
   UserCheck,
-  FileText
+  FileText,
+  ShoppingCart,
+  Handshake,
+  ClipboardCheck,
+  Warehouse,
+  FileCheck
 } from "lucide-react";
 
 // 生产环境 API 地址
@@ -141,6 +146,8 @@ export default function AdminDashboard() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [acquisitionSubTab, setAcquisitionSubTab] = useState<"inspection" | "acquisition_confirm" | "inventory">("inspection");
+  const [deliverySubTab, setDeliverySubTab] = useState<"pickup_reservation" | "delivery_confirm" | "delivery_manage">("pickup_reservation");
   const [showAnnouncementManager, setShowAnnouncementManager] = useState(false);
   const [error, setError] = useState("");
 
@@ -870,7 +877,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Tabs */}
+        {/* Tabs - 6 个主要板块 */}
         <div className="flex space-x-2 mb-8 bg-white rounded-2xl p-2 shadow-lg border border-slate-100">
           <button
             onClick={() => setActiveTab("dashboard")}
@@ -881,18 +888,29 @@ export default function AdminDashboard() {
             }`}
           >
             <LayoutDashboard size={18} className="mr-2" />
-            仪表盘 ({dashboardData?.pending_bicycles_count || 0})
+            仪表盘
           </button>
           <button
-            onClick={() => setActiveTab("pending")}
+            onClick={() => setActiveTab("acquisition")}
             className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center ${
-              activeTab === "pending" 
-                ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md" 
+              activeTab === "acquisition" 
+                ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md" 
                 : "text-gray-600 hover:bg-gray-50"
             }`}
           >
-            <CheckCircle size={18} className="mr-2" />
-            待审核车辆 ({pendingBikes.length})
+            <ShoppingCart size={18} className="mr-2" />
+            车辆收购
+          </button>
+          <button
+            onClick={() => setActiveTab("delivery")}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center ${
+              activeTab === "delivery" 
+                ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-md" 
+                : "text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <Handshake size={18} className="mr-2" />
+            车辆交付
           </button>
           <button
             onClick={() => setActiveTab("users")}
@@ -903,7 +921,7 @@ export default function AdminDashboard() {
             }`}
           >
             <Users size={18} className="mr-2" />
-            用户管理 ({allUsers.length})
+            用户管理
           </button>
           <button
             onClick={() => setActiveTab("bikes")}
@@ -914,18 +932,7 @@ export default function AdminDashboard() {
             }`}
           >
             <Truck size={18} className="mr-2" />
-            车辆管理 ({allBikes.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("appointments")}
-            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center ${
-              activeTab === "appointments" 
-                ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md" 
-                : "text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <Calendar size={18} className="mr-2" />
-            预约管理 ({allAppointments.length})
+            车辆管理
           </button>
           <button
             onClick={() => setShowAnnouncementManager(true)}
@@ -1141,48 +1148,276 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Pending Bikes Tab */}
-            {activeTab === "pending" && (
-              <div className="bg-white rounded-2xl shadow-xl p-8">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">待审核车辆</h2>
-                {pendingBikes.length > 0 ? (
-                      <div className="space-y-4">
-                        {pendingBikes.map((bike: any) => (
-                          <div key={bike.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+            {/* Vehicle Acquisition Tab (车辆收购 - 卖家线) */}
+            {activeTab === "acquisition" && (
+              <div className="space-y-6">
+                {/* Sub-tabs for acquisition */}
+                <div className="flex space-x-2 mb-6">
+                  <button
+                    onClick={() => setAcquisitionSubTab("inspection")}
+                    className={`flex-1 py-2 px-4 rounded-lg font-semibold transition ${
+                      acquisitionSubTab === "inspection"
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    <ClipboardCheck size={16} className="inline mr-2" />
+                    验车预约
+                  </button>
+                  <button
+                    onClick={() => setAcquisitionSubTab("acquisition_confirm")}
+                    className={`flex-1 py-2 px-4 rounded-lg font-semibold transition ${
+                      acquisitionSubTab === "acquisition_confirm"
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    <FileCheck size={16} className="inline mr-2" />
+                    收购预约确认
+                  </button>
+                  <button
+                    onClick={() => setAcquisitionSubTab("inventory")}
+                    className={`flex-1 py-2 px-4 rounded-lg font-semibold transition ${
+                      acquisitionSubTab === "inventory"
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    <Warehouse size={16} className="inline mr-2" />
+                    库存管理
+                  </button>
+                </div>
+
+                {/* Inspection Appointment (验车预约) */}
+                {acquisitionSubTab === "inspection" && (
+                  <div className="bg-white rounded-2xl shadow-xl p-8">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                      <ClipboardCheck className="mr-3 text-blue-500" />
+                      验车预约 - 提出时间段等待卖家选择
+                    </h2>
+                    <p className="text-gray-600 mb-4">
+                      这里显示需要管理员提出时间段的卖家车辆登记。点击"提出时间段"按钮，为卖家选择验车时间。
+                    </p>
+                    <div className="space-y-4">
+                      {pendingBikes.map((bike: any) => (
+                        <div key={bike.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                          <div>
+                            <p className="font-bold text-gray-700">{bike.brand}</p>
+                            <p className="text-sm text-gray-500">
+                              车主 ID: {bike.owner_id?.substring(0, 8)}... | 价格：¥{bike.price} | 成色：{bike.condition}/10
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleProposeTimeSlots(bike.id)}
+                            className="bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-600 transition"
+                          >
+                            提出时间段
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Acquisition Confirmation (收购预约确认) */}
+                {acquisitionSubTab === "acquisition_confirm" && (
+                  <div className="bg-white rounded-2xl shadow-xl p-8">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                      <FileCheck className="mr-3 text-green-500" />
+                      收购预约确认 - 确认卖家选择的时间段
+                    </h2>
+                    <p className="text-gray-600 mb-4">
+                      这里显示卖家已选择时间段、等待管理员确认的交易。点击"确认交易"按钮完成确认。
+                    </p>
+                    <div className="space-y-4">
+                      {allBikes.filter((bike: any) => bike.status === 'PENDING_ADMIN_CONFIRMATION_SELLER').map((bike: any) => (
+                        <div key={bike.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                          <div>
+                            <p className="font-bold text-gray-700">{bike.brand}</p>
+                            <p className="text-sm text-gray-500">
+                              状态：等待管理员确认（卖家）
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleConfirmBicycle(bike.id)}
+                            className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition"
+                          >
+                            确认交易
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Inventory Management (库存管理) */}
+                {acquisitionSubTab === "inventory" && (
+                  <div className="bg-white rounded-2xl shadow-xl p-8">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                      <Warehouse className="mr-3 text-purple-500" />
+                      库存管理 - 确认入库
+                    </h2>
+                    <p className="text-gray-600 mb-4">
+                      这里显示已预约、等待线下交易后入库的车辆。点击"确认入库"按钮将车辆存入库存。
+                    </p>
+                    <div className="space-y-4">
+                      {allBikes.filter((bike: any) => bike.status === 'RESERVED').map((bike: any) => (
+                        <div key={bike.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                          <div>
+                            <p className="font-bold text-gray-700">{bike.brand}</p>
+                            <p className="text-sm text-gray-500">
+                              状态：已预约
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleStoreInInventory(bike.id)}
+                            className="bg-purple-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-600 transition"
+                          >
+                            确认入库
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Vehicle Delivery Tab (车辆交付 - 买家线) */}
+            {activeTab === "delivery" && (
+              <div className="space-y-6">
+                {/* Sub-tabs for delivery */}
+                <div className="flex space-x-2 mb-6">
+                  <button
+                    onClick={() => setDeliverySubTab("pickup_reservation")}
+                    className={`flex-1 py-2 px-4 rounded-lg font-semibold transition ${
+                      deliverySubTab === "pickup_reservation"
+                        ? "bg-purple-500 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    <Calendar size={16} className="inline mr-2" />
+                    提车预约
+                  </button>
+                  <button
+                    onClick={() => setDeliverySubTab("delivery_confirm")}
+                    className={`flex-1 py-2 px-4 rounded-lg font-semibold transition ${
+                      deliverySubTab === "delivery_confirm"
+                        ? "bg-purple-500 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    <CheckCircle size={16} className="inline mr-2" />
+                    交付预约确认
+                  </button>
+                  <button
+                    onClick={() => setDeliverySubTab("delivery_manage")}
+                    className={`flex-1 py-2 px-4 rounded-lg font-semibold transition ${
+                      deliverySubTab === "delivery_manage"
+                        ? "bg-purple-500 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    <Handshake size={16} className="inline mr-2" />
+                    交付管理
+                  </button>
+                </div>
+
+                {/* Pickup Reservation (提车预约) */}
+                {deliverySubTab === "pickup_reservation" && (
+                  <div className="bg-white rounded-2xl shadow-xl p-8">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                      <Calendar className="mr-3 text-purple-500" />
+                      提车预约 - 提出时间段等待买家选择
+                    </h2>
+                    <p className="text-gray-600 mb-4">
+                      这里显示需要管理员提出时间段的买家预约。点击"提出时间段"按钮，为买家选择提车时间。
+                    </p>
+                    <div className="space-y-4">
+                      {allAppointments.filter((apt: any) => apt.status === 'PENDING').map((apt: any) => (
+                        <div key={apt.id} className="p-4 bg-gray-50 rounded-lg">
+                          <div className="flex justify-between items-center mb-2">
                             <div>
-                              <p className="font-bold text-gray-700">{bike.brand}</p>
+                              <p className="font-bold text-gray-800">预约 ID: {apt.id.slice(0, 8)}...</p>
                               <p className="text-sm text-gray-500">
-                                车主 ID: {bike.owner_id?.substring(0, 8)}... | 价格：¥{bike.price} | 成色：{bike.condition}/10
+                                类型：{apt.type === 'pick-up' ? '取车' : '还车'} | 
+                                自行车 ID: {apt.bicycle_id?.slice(0, 8)}...
                               </p>
                             </div>
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => handleProposeTimeSlots(bike.id)}
-                                className="bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-600 transition"
-                                title="卖家场景：提出时间段，等待卖家选择"
-                              >
-                                提出时间段
-                              </button>
-                              <button
-                                onClick={() => handleApprove(bike.id)}
-                                className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition"
-                                title="买家场景：直接批准上架"
-                              >
-                                批准上架
-                              </button>
-                              <button
-                                onClick={() => handleReject(bike.id)}
-                                className="bg-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-600 transition"
-                              >
-                                拒绝
-                              </button>
-                            </div>
+                            <button
+                              onClick={() => handleProposeAppointmentSlots(apt.id)}
+                              className="bg-purple-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-600 transition"
+                            >
+                              提出时间段
+                            </button>
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-gray-500">当前没有待审核的车辆。</p>
-                    )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Delivery Confirmation (交付预约确认) */}
+                {deliverySubTab === "delivery_confirm" && (
+                  <div className="bg-white rounded-2xl shadow-xl p-8">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                      <CheckCircle className="mr-3 text-green-500" />
+                      交付预约确认 - 确认买家选择的时间段
+                    </h2>
+                    <p className="text-gray-600 mb-4">
+                      这里显示买家已选择时间段、等待管理员确认的预约。
+                    </p>
+                    <div className="space-y-4">
+                      {allAppointments.filter((apt: any) => apt.status === 'PENDING_ADMIN_CONFIRMATION_BUYER').map((apt: any) => (
+                        <div key={apt.id} className="p-4 bg-gray-50 rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-bold text-gray-800">预约 ID: {apt.id.slice(0, 8)}...</p>
+                              <p className="text-sm text-gray-500">状态：等待管理员确认（买家）</p>
+                            </div>
+                            <button
+                              onClick={() => handleConfirmTimeSlot(apt.id)}
+                              className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition"
+                            >
+                              确认时间段
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Delivery Management (交付管理) */}
+                {deliverySubTab === "delivery_manage" && (
+                  <div className="bg-white rounded-2xl shadow-xl p-8">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                      <Handshake className="mr-3 text-orange-500" />
+                      交付管理 - 确认提车
+                    </h2>
+                    <p className="text-gray-600 mb-4">
+                      这里显示等待买家线下提车的预约。点击"确认提车"完成交付。
+                    </p>
+                    <div className="space-y-4">
+                      {allAppointments.filter((apt: any) => apt.status === 'PENDING_PICKUP').map((apt: any) => (
+                        <div key={apt.id} className="p-4 bg-gray-50 rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-bold text-gray-800">预约 ID: {apt.id.slice(0, 8)}...</p>
+                              <p className="text-sm text-gray-500">状态：等待提车</p>
+                            </div>
+                            <button
+                              onClick={() => handleConfirmPickup(apt.id)}
+                              className="bg-orange-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-orange-600 transition"
+                            >
+                              确认提车
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

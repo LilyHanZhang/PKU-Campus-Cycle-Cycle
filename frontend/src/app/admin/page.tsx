@@ -1047,7 +1047,10 @@ export default function AdminDashboard() {
                             <p className="text-sm text-gray-500 mt-1">ID: {bike.id.slice(0, 8)}...</p>
                           </div>
                           <button
-                            onClick={() => setActiveTab("pending")}
+                            onClick={() => {
+                              setActiveTab("acquisition");
+                              setAcquisitionSubTab("inspection");
+                            }}
                             className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 font-bold shadow-md transition-all flex items-center"
                           >
                             处理
@@ -1088,7 +1091,10 @@ export default function AdminDashboard() {
                             <p className="text-xs text-gray-500 mt-2">时间段 ID: {apt.time_slot_id?.slice(0, 8)}...</p>
                           </div>
                           <button
-                            onClick={() => handleConfirmTimeSlot(apt.id)}
+                            onClick={() => {
+                              setActiveTab("delivery");
+                              setDeliverySubTab("delivery_confirm");
+                            }}
                             className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 font-bold shadow-md transition-all flex items-center"
                           >
                             <CheckCircle size={18} className="mr-2" />
@@ -1124,7 +1130,10 @@ export default function AdminDashboard() {
                             <p className="text-xs text-gray-500 mt-2">时间段 ID: {bike.time_slot_id?.slice(0, 8)}...</p>
                           </div>
                           <button
-                            onClick={() => handleConfirmBicycle(bike.id)}
+                            onClick={() => {
+                              setActiveTab("acquisition");
+                              setAcquisitionSubTab("acquisition_confirm");
+                            }}
                             className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 font-bold shadow-md transition-all flex items-center"
                           >
                             <CheckCircle size={18} className="mr-2" />
@@ -1381,11 +1390,12 @@ export default function AdminDashboard() {
                       这里显示买家已选择时间段、等待管理员确认的预约。
                     </p>
                     <div className="space-y-4">
-                      {allAppointments.filter((apt: any) => apt.status === 'PENDING_ADMIN_CONFIRMATION_BUYER').map((apt: any) => (
+                      {dashboardData.waiting_appointments && dashboardData.waiting_appointments.map((apt: any) => (
                         <div key={apt.id} className="p-4 bg-gray-50 rounded-lg">
                           <div className="flex justify-between items-center">
                             <div>
                               <p className="font-bold text-gray-800">预约 ID: {apt.id.slice(0, 8)}...</p>
+                              <p className="text-sm text-gray-500">买家：{apt.username} | 车辆：{apt.bicycle_brand}</p>
                               <p className="text-sm text-gray-500">状态：等待管理员确认（买家）</p>
                             </div>
                             <button
@@ -1397,6 +1407,9 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                       ))}
+                      {(!dashboardData.waiting_appointments || dashboardData.waiting_appointments.length === 0) && (
+                        <p className="text-gray-500 text-center py-8">暂无待确认的交付预约</p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1409,15 +1422,15 @@ export default function AdminDashboard() {
                       交付管理 - 确认提车
                     </h2>
                     <p className="text-gray-600 mb-4">
-                      这里显示等待买家线下提车的预约。点击"确认提车"完成交付。
+                      这里显示已确认时间段、等待买家线下提车的预约。点击"确认提车"完成交付。
                     </p>
                     <div className="space-y-4">
-                      {allAppointments.filter((apt: any) => apt.status === 'PENDING_PICKUP').map((apt: any) => (
+                      {allAppointments.filter((apt: any) => apt.status === 'CONFIRMED' && apt.type === 'pick-up').map((apt: any) => (
                         <div key={apt.id} className="p-4 bg-gray-50 rounded-lg">
                           <div className="flex justify-between items-center">
                             <div>
                               <p className="font-bold text-gray-800">预约 ID: {apt.id.slice(0, 8)}...</p>
-                              <p className="text-sm text-gray-500">状态：等待提车</p>
+                              <p className="text-sm text-gray-500">状态：已确认，等待提车</p>
                             </div>
                             <button
                               onClick={() => handleConfirmPickup(apt.id)}
@@ -1428,6 +1441,9 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                       ))}
+                      {allAppointments.filter((apt: any) => apt.status === 'CONFIRMED' && apt.type === 'pick-up').length === 0 && (
+                        <p className="text-gray-500 text-center py-8">暂无待提车的预约</p>
+                      )}
                     </div>
                   </div>
                 )}

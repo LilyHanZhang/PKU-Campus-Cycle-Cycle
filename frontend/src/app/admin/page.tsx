@@ -1221,28 +1221,47 @@ export default function AdminDashboard() {
                   </div>
                 )}
 
-                {/* Pending Appointments List (old name for backward compatibility) */}
-                {dashboardData.waiting_appointments && dashboardData.waiting_appointments.length > 0 && (
-                  <div className="bg-white rounded-2xl shadow-xl p-6">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-4">待处理预约</h2>
+                {/* Appointments Without Time Slots (Delivery Reservation - 2.2) */}
+                {allAppointments.filter((apt: any) => apt.status === 'PENDING' && !apt.time_slot_id && apt.type === 'pick-up').length > 0 && (
+                  <div className="bg-white rounded-3xl shadow-xl p-6 border border-slate-100">
+                    <div className="flex items-center mb-6">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center mr-3">
+                        <Clock size={20} className="text-white" />
+                      </div>
+                      <h2 className="text-2xl font-bold text-gray-800">⏰ 等待提出时间段的预约（买家已锁定）</h2>
+                    </div>
                     <div className="space-y-3">
-                      {dashboardData.waiting_appointments.map((apt: any) => (
-                        <div key={apt.id} className="p-4 bg-gray-50 rounded-lg flex justify-between items-center">
-                          <div>
-                            <p className="font-bold text-gray-800">预约 ID: {apt.id.slice(0, 8)}...</p>
-                            <p className="text-sm text-gray-500">类型：{apt.type === 'pick-up' ? '取车' : '还车'}</p>
+                      {allAppointments.filter((apt: any) => apt.status === 'PENDING' && !apt.time_slot_id && apt.type === 'pick-up').map((apt: any) => (
+                        <div key={apt.id} className="p-5 bg-gradient-to-r from-cyan-50 to-cyan-100/50 rounded-2xl flex justify-between items-center hover:shadow-md transition-all">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <span className="px-3 py-1 bg-cyan-200 text-cyan-700 rounded-full text-xs font-bold">预约</span>
+                              <p className="font-bold text-gray-800">预约 ID: {apt.id.slice(0, 8)}...</p>
+                            </div>
+                            <div className="flex items-center space-x-4 text-sm text-gray-600">
+                              <span>状态：待处理</span>
+                              <span>类型：取车</span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2">买家已锁定，等待管理员提出时间段</p>
                           </div>
                           <button
-                            onClick={() => setActiveTab("appointments")}
-                            className="px-4 py-2 bg-[#2ab26a] text-white rounded-lg hover:bg-[#249a5c]"
+                            onClick={() => {
+                              setActiveTab("delivery");
+                              setDeliverySubTab("pickup_reservation");
+                            }}
+                            className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 font-bold shadow-md transition-all flex items-center"
                           >
-                            处理
+                            跳转
+                            <ChevronRight size={16} className="ml-1" />
                           </button>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
+
+                {/* Pending Appointments List (old name for backward compatibility) - REMOVE THIS */}
+                {/* This old card is no longer needed as we have specific cards for each task */}
               </div>
             )}
 

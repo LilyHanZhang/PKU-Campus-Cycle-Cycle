@@ -226,11 +226,8 @@ export default function AdminDashboard() {
       setPendingBikes(pendingRes.data);
       setAllUsers(usersRes.data);
       setAllBikes(bikesRes.data);
-      // 只显示 PENDING 和 CONFIRMED 状态的预约
-      const activeAppointments = appointmentsRes.data.filter((apt: any) => 
-        apt.status === 'PENDING' || apt.status === 'CONFIRMED'
-      );
-      setAllAppointments(activeAppointments);
+      // 显示所有状态的预约（用于提车预约、交付管理等）
+      setAllAppointments(appointmentsRes.data);
       setDashboardData(dashboardData);
     } catch (err: any) {
       console.error("Failed to fetch data", err);

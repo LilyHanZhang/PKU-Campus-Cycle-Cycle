@@ -79,6 +79,7 @@ export default function Home() {
   const [countdowns, setCountdowns] = useState([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+  const [adminTaskCount, setAdminTaskCount] = useState(0);
   const [showGuide, setShowGuide] = useState(false);
 
   // 计算总提示数（待处理时间段 + 未读消息）
@@ -99,11 +100,14 @@ export default function Home() {
     if (isAuthenticated && user) {
       fetchCountdown();
       fetchUnreadMessages();
+      fetchAdminTasks();
       const interval = setInterval(fetchCountdown, 1000);
       const messageInterval = setInterval(fetchUnreadMessages, 5000);
+      const adminInterval = setInterval(fetchAdminTasks, 10000); // 每 10 秒更新一次管理员任务
       return () => {
         clearInterval(interval);
         clearInterval(messageInterval);
+        clearInterval(adminInterval);
       };
     }
   }, [isAuthenticated, user]);
@@ -132,6 +136,23 @@ export default function Home() {
       setUnreadMessageCount(response.data || 0);
     } catch (error) {
       console.error("Failed to fetch unread messages", error);
+    }
+  };
+
+  const fetchAdminTasks = async () => {
+    if (!isAuthenticated || (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN")) return;
+    const token = localStorage.getItem("access_token");
+    try {
+      const response = await axios.get(`${API_URL}/bicycles/admin/dashboard`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // 计算待办任务总数
+      const count = (response.data.pending_bicycles_count || 0) + 
+                    (response.data.pending_appointments_count || 0) + 
+                    (response.data.waiting_confirmation_count || 0);
+      setAdminTaskCount(count);
+    } catch (error) {
+      console.error("Failed to fetch admin tasks", error);
     }
   };
 
@@ -186,9 +207,14 @@ export default function Home() {
                     {(user?.role === "ADMIN" || user?.role === "SUPER_ADMIN") && (
                       <Link
                         href="/admin"
-                        className="hidden sm:flex items-center text-gray-600 hover:text-emerald-600 font-medium transition"
+                        className="hidden sm:flex items-center text-gray-600 hover:text-emerald-600 font-medium transition relative"
                       >
                         管理后台
+                        {adminTaskCount > 0 && (
+                          <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse shadow-lg">
+                            {adminTaskCount > 9 ? '9+' : adminTaskCount}
+                          </div>
+                        )}
                       </Link>
                     )}
                     <Link href="/profile">

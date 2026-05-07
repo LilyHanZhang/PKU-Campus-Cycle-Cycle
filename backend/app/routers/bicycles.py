@@ -550,9 +550,18 @@ def propose_appointment_slots(
         raise HTTPException(status_code=400, detail="预约状态不正确")
     
     print(f"DEBUG: 接收到的 time_slots: {time_slots}")
+    print(f"DEBUG: time_slots 类型：{type(time_slots)}")
+    print(f"DEBUG: time_slots 长度：{len(time_slots) if time_slots else 'None'}")
+    print(f"DEBUG: appointment.type = {appointment.type}")
     
     from ..models import TimeSlot
     from datetime import datetime
+    
+    # 根据预约类型确定时间段类型（与预约类型相反）
+    # appointment.type = "pick-up" (买家来取车) -> appointment_type = "drop-off" (管理员送车)
+    # appointment.type = "drop-off" (卖家送车) -> appointment_type = "pick-up" (管理员取车)
+    appointment_type = "drop-off" if appointment.type == "pick-up" else "pick-up"
+    print(f"DEBUG: 使用 appointment_type = {appointment_type}")
     
     # 创建时间段
     created_slots = []
@@ -561,7 +570,7 @@ def propose_appointment_slots(
         print(f"DEBUG: 处理时间段：{slot_data}")
         time_slot = TimeSlot(
             bicycle_id=appointment.bicycle_id,
-            appointment_type=appointment.type,  # 买家取车
+            appointment_type=appointment_type,  # 与预约类型相反
             start_time=datetime.fromisoformat(slot_data["start_time"]),
             end_time=datetime.fromisoformat(slot_data["end_time"]),
             is_booked="false"

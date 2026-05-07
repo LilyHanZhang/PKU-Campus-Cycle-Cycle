@@ -166,9 +166,14 @@ def get_available_time_slots(
     if str(appointment.user_id) != current_user["user_id"] and current_user["role"] not in ["ADMIN", "SUPER_ADMIN"]:
         raise HTTPException(status_code=403, detail="无权限查看")
     
+    # 根据预约类型确定时间段类型（与预约类型相反）
+    # appointment.type = "pick-up" (买家来取车) -> appointment_type = "drop-off" (管理员送车)
+    # appointment.type = "drop-off" (卖家送车) -> appointment_type = "pick-up" (管理员取车)
+    appointment_type = "drop-off" if appointment.type == "pick-up" else "pick-up"
+    
     time_slots = db.query(TimeSlot).filter(
         TimeSlot.bicycle_id == appointment.bicycle_id,
-        TimeSlot.appointment_type == appointment.type,
+        TimeSlot.appointment_type == appointment_type,
         TimeSlot.is_booked == "false"
     ).all()
     

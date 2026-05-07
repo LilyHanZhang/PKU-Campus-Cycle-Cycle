@@ -588,164 +588,189 @@ export default function AdminDashboard() {
   const handleProposeAppointmentSlots = async (aptId: string) => {
     const token = localStorage.getItem("access_token");
     
-    console.log("=== 提出时间段调试信息 ===");
-    console.log("预约 ID:", aptId);
-    console.log("预约 ID 类型:", typeof aptId);
-    console.log("预约 ID 长度:", aptId.length);
-    console.log("API URL:", `${API_URL}/appointments/${aptId}/propose-slots`);
-    
-    // 创建多个时间段输入框
-    const tempDiv = document.createElement('div');
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const minDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
-    
-    tempDiv.innerHTML = `
-      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 9999; max-height: 80vh; overflow-y: auto; min-width: 550px;">
-        <h3 style="margin-bottom: 15px; font-size: 20px; font-weight: bold; color: #1f2937;">为买家预约提出时间段</h3>
-        <p style="margin-bottom: 15px; color: #6b7280; font-size: 14px; line-height: 1.6;">
-          <strong>使用说明：</strong><br/>
-          1. 点击日期时间输入框，会弹出日期选择器<br/>
-          2. 选择日期后，在时间部分可以直接点击小时或分钟数字进行选择<br/>
-          3. 也可以直接在输入框中手动输入时间（格式：YYYY-MM-DD HH:MM）<br/>
-          4. 请至少提出 1 个时间段（可添加多个）
-        </p>
-        <div id="slotsContainer" style="max-height: 350px; overflow-y: auto; margin-bottom: 15px;"></div>
-        <button id="addSlotBtn" style="width: 100%; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: 600;">+ 添加时间段</button>
-        <div style="display: flex; gap: 10px;">
-          <button id="submitBtn" style="flex: 1; padding: 12px; background: #2ab26a; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">提交</button>
-          <button id="cancelBtn" style="flex: 1; padding: 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">取消</button>
-        </div>
-      </div>
-      <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9998;"></div>
-    `;
-    document.body.appendChild(tempDiv);
-
-    const slotsContainer = document.getElementById('slotsContainer')!;
-    let slotCount = 0;
-
-    const addSlotInput = () => {
-      slotCount++;
-      const slotDiv = document.createElement('div');
-      slotDiv.className = 'slot-input';
-      slotDiv.style.cssText = 'margin-bottom: 12px; padding: 12px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;';
-      slotDiv.innerHTML = `
-        <div style="display: flex; gap: 12px; align-items: center;">
-          <div style="flex: 1;">
-            <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">开始时间</label>
-            <input type="datetime-local" class="startTime" min="${minDateTime}" step="60" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
-          </div>
-          <div style="flex: 1;">
-            <label style="display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #374151;">结束时间</label>
-            <input type="datetime-local" class="endTime" min="${minDateTime}" step="60" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
-          </div>
-          ${slotCount > 1 ? '<button class="removeSlot" style="padding: 8px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold;">×</button>' : ''}
-        </div>
-      `;
-      slotsContainer.appendChild(slotDiv);
-
-      const removeBtn = slotDiv.querySelector('.removeSlot');
-      if (removeBtn) {
-        removeBtn.addEventListener('click', () => {
-          if (slotsContainer.children.length > 1) {
-            slotsContainer.removeChild(slotDiv);
-          } else {
-            alert("至少需要一个时间段");
-          }
-        });
-      }
-    };
-
-    addSlotInput();
-
-    const addSlotBtn = document.getElementById('addSlotBtn');
-    addSlotBtn?.addEventListener('click', addSlotInput);
-
-    const cancelBtn = document.getElementById('cancelBtn');
-    const submitBtn = document.getElementById('submitBtn');
-    
-    const cleanup = () => {
-      document.body.removeChild(tempDiv);
-    };
-
-    cancelBtn?.addEventListener('click', cleanup);
-
-    submitBtn?.addEventListener('click', async () => {
-      const startTimeInputs = document.querySelectorAll('.startTime') as NodeListOf<HTMLInputElement>;
-      const endTimeInputs = document.querySelectorAll('.endTime') as NodeListOf<HTMLInputElement>;
+    try {
+      // 获取该预约的可用时间段
+      const response = await axios.get(`${API_URL}/time_slots/appointment/${aptId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
-      const timeSlots = [];
-      let hasError = false;
+      const availableSlots = response.data || [];
       
-      for (let i = 0; i < startTimeInputs.length; i++) {
-        const startTime = startTimeInputs[i].value.trim();
-        const endTime = endTimeInputs[i].value.trim();
-        
-        console.log(`Slot ${i}: start="${startTime}", end="${endTime}"`);
-        
-        // 检查是否为空
-        if (!startTime || !endTime) {
-          alert("请填写所有时间段");
-          hasError = true;
-          break;
-        }
-        
-        // 验证时间格式 - datetime-local 返回 "YYYY-MM-DDTHH:mm" 格式
-        const start = new Date(startTime);
-        const end = new Date(endTime);
-        
-        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-          alert("时间格式不正确，请重新选择时间");
-          hasError = true;
-          break;
-        }
-        
-        if (start >= end) {
-          alert("开始时间必须早于结束时间");
-          hasError = true;
-          break;
-        }
-        
-        // 验证时间不是过去的时间
-        if (start < new Date()) {
-          alert("开始时间不能是过去的时间");
-          hasError = true;
-          break;
-        }
-        
-        timeSlots.push({
-          start_time: start.toISOString(),
-          end_time: end.toISOString()
-        });
-      }
-      
-      if (hasError || timeSlots.length === 0) {
-        console.log("Validation failed:", { hasError, timeSlots: timeSlots.length });
+      if (availableSlots.length === 0) {
+        alert("请先为买家创建时间段");
         return;
       }
+      
+      // 创建选择界面
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = `
+        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); z-index: 9999; max-height: 80vh; overflow-y: auto; min-width: 700px; max-width: 900px;">
+          <h3 style="margin-bottom: 20px; font-size: 24px; font-weight: bold; color: #1f2937; text-align: center;">为买家预约提出时间段</h3>
+          <p style="margin-bottom: 20px; color: #6b7280; font-size: 14px; line-height: 1.6; text-align: center;">
+            <strong>操作说明：</strong>点击时间段进行选择，可多选，最后点击"提交"按钮
+          </p>
+          <div id="slotsContainer" style="max-height: 500px; overflow-y: auto; margin-bottom: 20px;"></div>
+          <div style="display: flex; gap: 15px;">
+            <button id="submitBtn" style="flex: 1; padding: 14px; background: linear-gradient(to right, #10b981, #059669); color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">提交</button>
+            <button id="cancelBtn" style="flex: 1; padding: 14px; background: linear-gradient(to right, #ef4444, #dc2626); color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">取消</button>
+          </div>
+        </div>
+        <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9998;"></div>
+      `;
+      document.body.appendChild(tempDiv);
 
-      try {
-        console.log("发送请求...");
-        await axios.post(
-          `${API_URL}/appointments/${aptId}/propose-slots`,
-          timeSlots,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        console.log("请求成功！");
-        alert(`✓ 已提出 ${timeSlots.length} 个时间段，等待买家选择！`);
-        cleanup();
-        fetchData();
-      } catch (err: any) {
-        console.error("请求失败:", err);
-        console.error("错误响应:", err.response?.data);
-        console.error("错误状态码:", err.response?.status);
-        alert(`操作失败：${err.response?.data?.detail || "请重试"}`);
-      }
-    });
+      const slotsContainer = document.getElementById('slotsContainer')!;
+      const selectedSlots: string[] = [];
+
+      // 按日期分组时间段
+      const slotsByDate: Record<string, any[]> = {};
+      availableSlots.forEach((slot: any) => {
+        const date = slot.start_time.split('T')[0];
+        if (!slotsByDate[date]) {
+          slotsByDate[date] = [];
+        }
+        slotsByDate[date].push(slot);
+      });
+
+      // 渲染时间段
+      Object.entries(slotsByDate).forEach(([date, slots]) => {
+        const dateDiv = document.createElement('div');
+        dateDiv.style.marginBottom = '24px';
+        
+        // 日期标签
+        const dateLabel = document.createElement('div');
+        dateLabel.style.cssText = 'display: inline-block; background: linear-gradient(to right, #3b82f6, #06b6d4); color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 14px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
+        dateLabel.textContent = date;
+        dateDiv.appendChild(dateLabel);
+        
+        // 时间段列表
+        const slotsDiv = document.createElement('div');
+        slotsDiv.style.cssText = 'display: flex; flex-direction: column; gap: 12px; margin-left: 12px;';
+        
+        slots.forEach((slot: any) => {
+          const slotDiv = document.createElement('div') as HTMLElement;
+          slotDiv.dataset.slotId = slot.id;
+          slotDiv.style.cssText = 'position: relative; margin-left: 24px; padding: 20px; border-radius: 16px; border: 2px solid #e5e7eb; cursor: pointer; transition: all 0.2s; background: white;';
+          
+          // 时间线圆点
+          const dotDiv = document.createElement('div');
+          dotDiv.className = 'dot';
+          dotDiv.style.cssText = 'position: absolute; left: -36px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; border-radius: 50%; border: 3px solid #d1d5db; background: white;';
+          slotDiv.appendChild(dotDiv);
+          
+          // 时间段内容
+          const contentDiv = document.createElement('div');
+          contentDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
+          
+          const leftDiv = document.createElement('div');
+          leftDiv.style.cssText = 'display: flex; align-items: center; gap: 12px;';
+          
+          // 时钟图标
+          const clockSpan = document.createElement('span');
+          clockSpan.style.cssText = 'color: #3b82f6; font-size: 20px;';
+          clockSpan.textContent = '🕐';
+          leftDiv.appendChild(clockSpan);
+          
+          // 时间（左边）
+          const timeSpan = document.createElement('span');
+          timeSpan.style.cssText = 'font-size: 18px; font-weight: bold; color: #1f2937;';
+          const startTime = new Date(slot.start_time);
+          const endTime = new Date(slot.end_time);
+          timeSpan.textContent = `${startTime.getHours().toString().padStart(2, '0')}:${startTime.getMinutes().toString().padStart(2, '0')} - ${endTime.getHours().toString().padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`;
+          leftDiv.appendChild(timeSpan);
+          
+          contentDiv.appendChild(leftDiv);
+          
+          // 日期标签（右边）
+          const dateSpan = document.createElement('span');
+          dateSpan.style.cssText = 'padding: 6px 12px; border-radius: 12px; font-size: 13px; font-weight: bold; background: #dbeafe; color: #1e40af;';
+          const startDate = slot.start_time.split('T')[0];
+          const endDate = slot.end_time.split('T')[0];
+          dateSpan.textContent = startDate === endDate ? startDate : `${startDate} - ${endDate}`;
+          contentDiv.appendChild(dateSpan);
+          
+          slotDiv.appendChild(contentDiv);
+          
+          // 已选标记
+          const checkDiv = document.createElement('div');
+          checkDiv.className = 'check';
+          checkDiv.style.cssText = 'display: none; align-items: center; color: white; font-weight: bold; font-size: 14px;';
+          checkDiv.innerHTML = '✓ 已选择';
+          slotDiv.appendChild(checkDiv);
+          
+          // 点击选择
+          slotDiv.onclick = function() {
+            const self = this as HTMLElement;
+            const isSelected = self.dataset.selected === 'true';
+            if (isSelected) {
+              self.dataset.selected = 'false';
+              self.style.borderColor = '#e5e7eb';
+              self.style.background = 'white';
+              self.style.boxShadow = 'none';
+              (self.querySelector('.dot') as HTMLElement).style.borderColor = '#d1d5db';
+              (self.querySelector('.dot') as HTMLElement).style.background = 'white';
+              (self.querySelector('.check') as HTMLElement).style.display = 'none';
+              const index = selectedSlots.indexOf(slot.id);
+              if (index > -1) selectedSlots.splice(index, 1);
+            } else {
+              self.dataset.selected = 'true';
+              self.style.borderColor = '#3b82f6';
+              self.style.background = 'linear-gradient(to right, #3b82f6, #06b6d4)';
+              self.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+              self.style.transform = 'scale(1.02)';
+              (self.querySelector('.dot') as HTMLElement).style.borderColor = '#3b82f6';
+              (self.querySelector('.dot') as HTMLElement).style.background = 'white';
+              (self.querySelector('.check') as HTMLElement).style.display = 'flex';
+              selectedSlots.push(slot.id);
+            }
+          };
+          
+          slotsDiv.appendChild(slotDiv);
+        });
+        
+        dateDiv.appendChild(slotsDiv);
+        slotsContainer.appendChild(dateDiv);
+      });
+
+      const cancelBtn = document.getElementById('cancelBtn');
+      const submitBtn = document.getElementById('submitBtn');
+      
+      const cleanup = () => {
+        document.body.removeChild(tempDiv);
+      };
+
+      cancelBtn?.addEventListener('click', cleanup);
+
+      submitBtn?.addEventListener('click', async () => {
+        if (selectedSlots.length === 0) {
+          alert("请至少选择一个时间段");
+          return;
+        }
+        
+        try {
+          const timeSlotsData = availableSlots
+            .filter((slot: any) => selectedSlots.includes(slot.id))
+            .map((slot: any) => ({
+              start_time: slot.start_time,
+              end_time: slot.end_time
+            }));
+          
+          await axios.post(
+            `${API_URL}/appointments/${aptId}/propose-slots`,
+            timeSlotsData,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          
+          alert(`✓ 已提出 ${selectedSlots.length} 个时间段，等待买家选择！`);
+          cleanup();
+          fetchData();
+        } catch (err: any) {
+          alert(`操作失败：${err.response?.data?.detail || "请重试"}`);
+        }
+      });
+    } catch (err: any) {
+      alert(`获取时间段失败：${err.response?.data?.detail || "请重试"}`);
+    }
   };
 
   const handleConfirmTimeSlot = async (aptId: string) => {

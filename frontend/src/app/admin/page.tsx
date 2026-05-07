@@ -1528,28 +1528,48 @@ export default function AdminDashboard() {
                       这里显示需要管理员提出时间段的买家预约。点击"提出时间段"按钮，为买家选择提车时间。
                     </p>
                     <div className="space-y-4">
-                      {allAppointments.filter((apt: any) => apt.status === 'PENDING' && !apt.time_slot_id && apt.type === 'pick-up').map((apt: any) => (
-                        <div key={apt.id} className="p-4 bg-gray-50 rounded-lg">
-                          <div className="flex justify-between items-center mb-2">
-                            <div>
-                              <p className="font-bold text-gray-800">预约 ID: {apt.id.slice(0, 8)}...</p>
-                              <p className="text-sm text-gray-500">
-                                类型：取车 | 
-                                自行车 ID: {apt.bicycle_id?.slice(0, 8)}...
-                              </p>
+                      {(() => {
+                        // 提车预约：筛选 bike.status === 'PENDING_BUYER_APPOINTMENT' 的预约
+                        const pendingAppointments = allAppointments.filter((apt: any) => {
+                          const bike: any = allBikes.find((b: any) => b.id === apt.bicycle_id);
+                          return apt.status === 'PENDING' && 
+                                 apt.type === 'pick-up' && 
+                                 bike && 
+                                 bike.status === 'PENDING_BUYER_APPOINTMENT';
+                        });
+                        
+                        return pendingAppointments.map((apt: any) => (
+                          <div key={apt.id} className="p-4 bg-gray-50 rounded-lg">
+                            <div className="flex justify-between items-center mb-2">
+                              <div>
+                                <p className="font-bold text-gray-800">预约 ID: {apt.id.slice(0, 8)}...</p>
+                                <p className="text-sm text-gray-500">
+                                  类型：取车 | 
+                                  自行车 ID: {apt.bicycle_id?.slice(0, 8)}...
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => handleProposeAppointmentSlots(apt.id)}
+                                className="bg-purple-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-600 transition"
+                              >
+                                提出时间段
+                              </button>
                             </div>
-                            <button
-                              onClick={() => handleProposeAppointmentSlots(apt.id)}
-                              className="bg-purple-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-600 transition"
-                            >
-                              提出时间段
-                            </button>
                           </div>
-                        </div>
-                      ))}
-                      {allAppointments.filter((apt: any) => apt.status === 'PENDING' && !apt.time_slot_id && apt.type === 'pick-up').length === 0 && (
-                        <p className="text-gray-500 text-center py-8">暂无待提出时间段的买家预约</p>
-                      )}
+                        ));
+                      })()}
+                      {(() => {
+                        const pendingAppointments = allAppointments.filter((apt: any) => {
+                          const bike: any = allBikes.find((b: any) => b.id === apt.bicycle_id);
+                          return apt.status === 'PENDING' && 
+                                 apt.type === 'pick-up' && 
+                                 bike && 
+                                 bike.status === 'PENDING_BUYER_APPOINTMENT';
+                        });
+                        if (pendingAppointments.length === 0) {
+                          return <p className="text-gray-500 text-center py-8">暂无待提出时间段的买家预约</p>;
+                        }
+                      })()}
                     </div>
                   </div>
                 )}

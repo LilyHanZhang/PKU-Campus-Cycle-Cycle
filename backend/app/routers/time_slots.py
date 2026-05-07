@@ -216,7 +216,15 @@ def select_time_slot(
         raise HTTPException(status_code=404, detail="预约不存在")
     
     # 验证是预约所有者
-    if str(appointment.user_id) != current_user["user_id"]:
+    # 买家线特殊处理：如果自行车状态是 PENDING_BUYER_SLOT_SELECTION，允许买家选择时间段
+    # 因为买家线的 appointment.user_id 可能是卖家 ID
+    from ..models import Bicycle
+    bicycle = db.query(Bicycle).filter(Bicycle.id == appointment.bicycle_id).first()
+    has_permission = (
+        str(appointment.user_id) == current_user["user_id"] or
+        (bicycle and bicycle.status == "PENDING_BUYER_SLOT_SELECTION")
+    )
+    if not has_permission:
         raise HTTPException(status_code=403, detail="无权限修改此预约")
     
     time_slot = db.query(TimeSlot).filter(TimeSlot.id == selection.time_slot_id).first()

@@ -518,8 +518,8 @@ def create_appointment(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="该自行车当前不可预约"
             )
-        # 买家流程：预约后进入等待买家选择时间段状态
-        bike.status = BicycleStatus.PENDING_BUYER_SLOT_SELECTION.value
+        # 买家流程：预约后进入等待管理员提出时间段状态
+        bike.status = BicycleStatus.PENDING_BUYER_APPOINTMENT.value
 
     db_appointment = Appointment(
         user_id=UUID(current_user["user_id"]),

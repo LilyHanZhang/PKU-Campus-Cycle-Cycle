@@ -1284,14 +1284,13 @@ export default function AdminDashboard() {
 
                 {/* Appointments Without Time Slots (Delivery Reservation - 2.2) */}
                 {(() => {
-                  // 买家线：筛选状态为 PENDING 且自行车状态为 PENDING_BUYER_SLOT_SELECTION 且没有 time_slot_id 的预约
+                  // 买家线：筛选状态为 PENDING_BUYER_APPOINTMENT 的预约（等待管理员提出时间段）
                   const pendingPickupAppointments = allAppointments.filter((apt: any) => {
                     const bike: any = allBikes.find((b: any) => b.id === apt.bicycle_id);
                     return apt.status === 'PENDING' && 
                            apt.type === 'pick-up' && 
                            bike && 
-                           bike.status === 'PENDING_BUYER_SLOT_SELECTION' &&
-                           !apt.time_slot_id;
+                           bike.status === 'PENDING_BUYER_APPOINTMENT';
                   });
                   
                   if (pendingPickupAppointments.length === 0) return null;

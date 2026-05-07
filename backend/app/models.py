@@ -25,6 +25,7 @@ class BicycleStatus(str, enum.Enum):
     RESERVED = "RESERVED"  # 管理员已确认，等待线下交车（卖家送车到指定地点）
     
     # 买家流程状态（买家买车）
+    PENDING_BUYER_APPOINTMENT = "PENDING_BUYER_APPOINTMENT"  # 买家已预约，等待管理员提出时间段
     PENDING_BUYER_SLOT_SELECTION = "PENDING_BUYER_SLOT_SELECTION"  # 管理员已提出时间段，等待买家选择
     PENDING_ADMIN_CONFIRMATION_BUYER = "PENDING_ADMIN_CONFIRMATION_BUYER"  # 买家已选择时间段，等待管理员确认
     PENDING_PICKUP = "PENDING_PICKUP"  # 管理员已确认时间段，等待买家线下提车

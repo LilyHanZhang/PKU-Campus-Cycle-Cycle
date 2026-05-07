@@ -1279,7 +1279,21 @@ export default function AdminDashboard() {
                       <h2 className="text-2xl font-bold text-gray-800">⏰ 等待提出时间段的预约（买家已锁定）</h2>
                     </div>
                     <div className="space-y-3">
-                      {allAppointments.filter((apt: any) => apt.status === 'PENDING' && !apt.time_slot_id && apt.type === 'pick-up').map((apt: any) => (
+                      {(() => {
+                        // 调试信息
+                        const pendingPickupAppointments = allAppointments.filter((apt: any) => 
+                          apt.status === 'PENDING' && !apt.time_slot_id && apt.type === 'pick-up'
+                        );
+                        console.log('=== 提车预约调试信息 ===');
+                        console.log('所有预约:', allAppointments.length);
+                        console.log('PENDING 状态的预约:', allAppointments.filter((apt: any) => apt.status === 'PENDING').length);
+                        console.log('PENDING + pick-up 类型的预约:', allAppointments.filter((apt: any) => apt.status === 'PENDING' && apt.type === 'pick-up').length);
+                        console.log('等待提出时间段的预约:', pendingPickupAppointments.length);
+                        pendingPickupAppointments.forEach((apt: any) => {
+                          console.log(`预约 ${apt.id.slice(0, 8)}: status=${apt.status}, time_slot_id=${apt.time_slot_id}, type=${apt.type}`);
+                        });
+                        
+                        return pendingPickupAppointments.map((apt: any) => (
                         <div key={apt.id} className="p-5 bg-gradient-to-r from-cyan-50 to-cyan-100/50 rounded-2xl flex justify-between items-center hover:shadow-md transition-all">
                           <div className="flex-1">
                             <div className="flex items-center space-x-2 mb-2">
@@ -1303,7 +1317,8 @@ export default function AdminDashboard() {
                             <ChevronRight size={16} className="ml-1" />
                           </button>
                         </div>
-                      ))}
+                      ));
+                      })()}
                     </div>
                   </div>
                 )}

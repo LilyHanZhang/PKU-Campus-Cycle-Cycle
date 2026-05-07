@@ -373,19 +373,40 @@ def admin_cancel_bicycle(
     
     return {"message": "自行车登记已被管理员取消"}
 
-@router.put("/{bike_id}/reject", response_model=BicycleResponse)
+@router.put("/{bike_id}/reject", response_model=dict)
 def reject_bicycle(
     bike_id: UUID,
+    reason: str = "",
     current_user: dict = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
+    """管理员拒绝自行车登记并给出理由"""
     bike = db.query(Bicycle).filter(Bicycle.id == bike_id).first()
     if not bike:
         raise HTTPException(status_code=404, detail="自行车不存在")
 
-    bike.status = BicycleStatus.SOLD.value
+    # 删除相关的时间段
+    from ..models import TimeSlot
+    db.query(TimeSlot).filter(TimeSlot.bicycle_id == bike_id).delete()
+    
+    # 删除自行车
     db.delete(bike)
     db.commit()
+    
+    # 发送私信通知卖家
+    try:
+        from ..routers.messages import send_message_to_user
+        from uuid import UUID
+        admin_id = UUID(current_user["user_id"]) if isinstance(current_user["user_id"], str) else current_user["user_id"]
+        send_message_to_user(
+            db=db,
+            sender_id=admin_id,
+            receiver_id=bike.owner_id,
+            content=f"管理员已拒绝您的自行车登记。原因：{reason}。自行车 ID: {bike_id}"
+        )
+    except Exception as e:
+        print(f"Failed to send notification: {e}")
+    
     return {"message": "已拒绝并删除"}
 
 @router.delete("/{bike_id}")

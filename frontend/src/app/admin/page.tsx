@@ -487,10 +487,15 @@ export default function AdminDashboard() {
 
   const handleReject = async (bikeId: string) => {
     const token = localStorage.getItem("access_token");
+    const reason = prompt("请输入拒绝理由：");
+    if (!reason) return;
+    
     try {
-      await axios.put(`${API_URL}/bicycles/${bikeId}/reject`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.put(
+        `${API_URL}/bicycles/${bikeId}/reject?reason=${encodeURIComponent(reason)}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       alert("已拒绝并删除");
       fetchData();
     } catch (err) {

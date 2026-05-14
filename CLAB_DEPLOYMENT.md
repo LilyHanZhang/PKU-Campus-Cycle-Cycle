@@ -80,6 +80,8 @@ nohup npx next start --hostname 0.0.0.0 --port 3000 > ../frontend.log 2>&1 &
 
 ## 环境配置
 
+### 环境配置
+
 ### 前端环境变量 (.env.local)
 
 ```env
@@ -88,7 +90,7 @@ NEXT_PUBLIC_API_URL=http://10.129.245.117:8000
 
 ### 后端环境变量
 
-后端使用硬编码的配置，数据库文件位于 `/home/rocky/PKU-Campus-Cycle-Cycle/backend/app/data/campus_cycle.db`
+后端使用硬编码的配置，数据库文件位于 `/home/rocky/PKU-Campus-Cycle-Cycle/backend/pku_cycle.db`
 
 ## 服务管理
 

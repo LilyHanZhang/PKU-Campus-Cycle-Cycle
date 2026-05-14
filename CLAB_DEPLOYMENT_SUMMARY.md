@@ -58,7 +58,7 @@ NEXT_PUBLIC_API_URL=http://10.129.245.117:8000
 ```
 
 **后端配置**:
-- 数据库路径：`/home/rocky/PKU-Campus-Cycle-Cycle/backend/app/data/campus_cycle.db`
+- 数据库路径：`/home/rocky/PKU-Campus-Cycle-Cycle/backend/pku_cycle.db`
 - 静态文件：`/home/rocky/PKU-Campus-Cycle-Cycle/backend/app/uploads/`
 
 ## 关键问题与解决方案

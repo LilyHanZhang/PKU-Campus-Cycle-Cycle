@@ -254,8 +254,9 @@ async def upload_image(
             detail="文件大小不能超过 5MB"
         )
     
-    # 创建 uploads 目录
-    uploads_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
+    # 创建 uploads 目录（使用项目根目录，与 main.py 中的静态文件服务路径一致）
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    uploads_dir = os.path.join(project_root, "uploads")
     os.makedirs(uploads_dir, exist_ok=True)
     
     # 生成唯一文件名
@@ -267,8 +268,8 @@ async def upload_image(
     with open(file_path, "wb") as f:
         f.write(content)
     
-    # 生成 URL（使用 Render 的公网 URL）
-    image_url = f"https://pku-campus-cycle-cycle.onrender.com/uploads/{filename}"
+    # 生成 URL（使用 cLab 服务器的公网 URL）
+    image_url = f"http://10.129.245.117:8000/uploads/{filename}"
     
     return {"url": image_url, "filename": filename}
 

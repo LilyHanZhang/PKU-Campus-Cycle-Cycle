@@ -146,10 +146,11 @@ export default function Home() {
       const response = await axios.get(`${API_URL}/bicycles/admin/dashboard`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      // 计算待办任务总数
+      // 计算总待办任务总数（包括未读消息）
       const count = (response.data.pending_bicycles_count || 0) + 
                     (response.data.pending_appointments_count || 0) + 
-                    (response.data.waiting_confirmation_count || 0);
+                    (response.data.waiting_confirmation_count || 0) +
+                    (response.data.unread_messages_count || 0);
       setAdminTaskCount(count);
     } catch (error) {
       console.error("Failed to fetch admin tasks", error);

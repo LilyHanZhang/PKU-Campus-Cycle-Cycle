@@ -21,6 +21,4 @@ Always remember to perform unit tests. First perform unit tests locally, after i
 ### Website Tests
 - performed when being asked to "directly test the website".
 - refer to `/TESTING_LOGIC_SUMMARY.md`
-- when testing the website, if an ordinary user does not exist, create it first and then test the features
-- **Important**: Clear browser cache before testing (Ctrl+Shift+Delete or Cmd+Shift+Delete)
-- Use incognito/private mode if encountering cache issues
+

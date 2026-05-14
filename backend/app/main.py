@@ -124,6 +124,9 @@ os.makedirs(uploads_dir, exist_ok=True)
 os.makedirs(os.path.join(uploads_dir, "announcements", "images"), exist_ok=True)
 os.makedirs(os.path.join(uploads_dir, "announcements", "attachments"), exist_ok=True)
 
+# 也确保 messages 路由的 uploads 目录存在
+os.makedirs(uploads_dir, exist_ok=True)
+
 app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 @app.get("/")

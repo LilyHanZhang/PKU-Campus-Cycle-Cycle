@@ -127,12 +127,12 @@ export default function MessagesPage() {
       });
       setMessages(response.data);
       
-      // 标记为已读
-      await axios.post(
-        `${API_URL}/messages/conversation/${userId}/read-all`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      // 标记该对话的所有消息为已读（后端会自动标记）
+      // 但后端只标记来自特定用户的消息，不标记系统消息（sender_id=None）
+      // 所以需要额外调用 /read-all 来标记所有消息（包括系统消息）为已读
+      await axios.put(`${API_URL}/messages/read-all`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
     } catch (error) {
       console.error("获取消息失败:", error);
     }

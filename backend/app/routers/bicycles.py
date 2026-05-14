@@ -526,6 +526,28 @@ def create_appointment(
         status=AppointmentStatus.PENDING.value
     )
     db.add(db_appointment)
+    
+    # 发送私信通知所有管理员有新预约
+    try:
+        from ..routers.messages import send_message_to_user
+        from ..models import User, Role
+        
+        # 获取所有管理员
+        admins = db.query(User).filter(User.role.in_([Role.ADMIN.value, Role.SUPER_ADMIN.value])).all()
+        
+        # 确定预约类型描述
+        appointment_type_text = "买家预约提车" if appointment.type == "pick-up" else "卖家预约送车"
+        
+        for admin in admins:
+            send_message_to_user(
+                db=db,
+                sender_id=None,  # 系统消息
+                receiver_id=admin.id,
+                content=f"收到新的{appointment_type_text}！请及时登录管理后台查看并处理。"
+            )
+    except Exception as e:
+        print(f"Failed to send notification: {e}")
+    
     db.commit()
     db.refresh(db_appointment)
     return db_appointment
@@ -924,10 +946,18 @@ def get_admin_dashboard(
         Bicycle.id.in_(locked_bike_ids)
     ).all()
     
+    # 获取当前管理员的未读消息数量
+    from ..models import Message
+    unread_messages_count = db.query(Message).filter(
+        Message.receiver_id == UUID(current_user["user_id"]),
+        Message.is_read == False
+    ).count()
+    
     return {
         "pending_bicycles_count": len(pending_bicycles),
         "pending_appointments_count": len(waiting_appointments),
         "waiting_confirmation_count": len(waiting_bicycles) + len(waiting_appointments),
+        "unread_messages_count": unread_messages_count,
         "pending_bicycles": [
             {
                 "id": str(bike.id),

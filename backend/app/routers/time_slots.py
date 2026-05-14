@@ -677,10 +677,16 @@ def get_my_countdown(
                 "status": "pending" if time_left > 0 else "overdue"
             })
     
-    # 查询有待确认的预约
+    # 查询有待确认的预约（已有时间段，等待用户选择）
+    # 买家流程：PENDING_BUYER_SLOT_SELECTION - 管理员已提出时间段，等待买家选择
+    # 卖家流程：PENDING_SELLER_SLOT_SELECTION - 管理员已提出时间段，等待卖家选择
     pending_appointments = db.query(Appointment).filter(
         Appointment.user_id == UUID(current_user["user_id"]),
-        Appointment.status == AppointmentStatus.PENDING.value
+        Appointment.status.in_([
+            AppointmentStatus.PENDING_BUYER_SLOT_SELECTION.value,
+            AppointmentStatus.PENDING_SELLER_SLOT_SELECTION.value
+        ]),
+        Appointment.time_slot_id.isnot(None)
     ).all()
     
     pending_count = len(pending_appointments)

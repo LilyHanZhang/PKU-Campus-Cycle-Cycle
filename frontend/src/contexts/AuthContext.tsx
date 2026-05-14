@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // 生产环境 API 地址
-  const API_URL = "https://pku-campus-cycle-cycle.onrender.com";
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://10.129.245.117:8000";
 
   const fetchUser = async (token: string) => {
     try {

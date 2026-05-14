@@ -195,11 +195,19 @@ def propose_time_slots(
     # 创建时间段
     created_slots = []
     for slot_data in time_slots:
+        # 处理带 Z 后缀的 ISO 时间字符串
+        start_time_str = slot_data["start_time"]
+        end_time_str = slot_data["end_time"]
+        if start_time_str.endswith('Z'):
+            start_time_str = start_time_str[:-1] + '+00:00'
+        if end_time_str.endswith('Z'):
+            end_time_str = end_time_str[:-1] + '+00:00'
+        
         time_slot = TimeSlot(
             bicycle_id=bike_id,
             appointment_type=appointment_type,
-            start_time=datetime.fromisoformat(slot_data["start_time"]),
-            end_time=datetime.fromisoformat(slot_data["end_time"]),
+            start_time=datetime.fromisoformat(start_time_str),
+            end_time=datetime.fromisoformat(end_time_str),
             is_booked="false"
         )
         db.add(time_slot)
@@ -556,11 +564,19 @@ def propose_appointment_slots(
     first_slot_id = None
     for slot_data in time_slots:
         print(f"DEBUG: 处理时间段：{slot_data}")
+        # 处理带 Z 后缀的 ISO 时间字符串
+        start_time_str = slot_data["start_time"]
+        end_time_str = slot_data["end_time"]
+        if start_time_str.endswith('Z'):
+            start_time_str = start_time_str[:-1] + '+00:00'
+        if end_time_str.endswith('Z'):
+            end_time_str = end_time_str[:-1] + '+00:00'
+        
         time_slot = TimeSlot(
             bicycle_id=appointment.bicycle_id,
             appointment_type=appointment_type,  # 与预约类型相反
-            start_time=datetime.fromisoformat(slot_data["start_time"]),
-            end_time=datetime.fromisoformat(slot_data["end_time"]),
+            start_time=datetime.fromisoformat(start_time_str),
+            end_time=datetime.fromisoformat(end_time_str),
             is_booked="false"
         )
         db.add(time_slot)

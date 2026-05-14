@@ -1,5 +1,7 @@
 # 敏感信息文件
 website_info.md
+*.pem
+backend/app/data/*.db
 
 # Python
 __pycache__/

@@ -61,7 +61,7 @@ export default function MessagesPage() {
   const [showImageUpload, setShowImageUpload] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const API_URL = "https://pku-campus-cycle-cycle.onrender.com";
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://10.129.245.117:8000";
 
   useEffect(() => {
     if (!isAuthenticated) {

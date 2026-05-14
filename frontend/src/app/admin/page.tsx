@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 
 // 生产环境 API 地址
-const API_URL = "https://pku-campus-cycle-cycle.onrender.com";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://10.129.245.117:8000";
 
 // 将 ISO 时间转换为北京时间显示（UTC+8）
 const formatToBeijingTime = (isoString: string) => {

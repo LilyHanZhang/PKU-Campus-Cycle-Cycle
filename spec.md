@@ -107,50 +107,59 @@
   - **预约管理:** 查看和管理所有用户的预约时间段。
   - **数据看板:** 查看平台所有历史交易记录和统计数据。
 
-## 5. 技术方案 (免费部署)
+## 5. 技术方案 (cLab 部署)
 
 ### 5.1 技术栈
-* **前端框架:** **Next.js 16 (React)**，利用 App Router 和 Server Actions。
+* **前端框架:** **Next.js 14 (React)**，利用 App Router 和 Server Actions。
 * **UI 与样式:** **Tailwind CSS**，现代化、简洁的界面。
 * **后端框架:** **FastAPI**，高性能 Python Web 框架。
-* **数据库:** **Supabase** PostgreSQL（免费 500MB 存储）。
-* **存储:** **Supabase Storage**（用于存放自行车照片）。
+* **数据库:** **SQLite**（本地文件数据库，适合轻量级应用）。
+* **存储:** **本地文件系统**（用于存放自行车照片和附件）。
 
 ### 5.2 部署方案
-* **前端部署:** **Vercel**（免费无缝部署 Next.js 应用）。
-* **后端部署:** **Railway** 或 **Render**（免费容器托管 FastAPI 应用）。
-  - Railway: 每月 500 小时免费额度，活动时更多。
-  - Render: 每月 750 小时免费额度。
-* **数据库:** **Supabase**（免费云数据库，即用即启动）。
+* **前端部署:** **cLab 服务器** (http://10.129.245.117:3000)
+  - 使用 Next.js 生产模式构建和运行
+  - 通过 SSH 远程部署和管理
+* **后端部署:** **cLab 服务器** (http://10.129.245.117:8000)
+  - 使用 Uvicorn 作为 ASGI 服务器
+  - 后台进程运行，支持日志记录
+* **数据库:** **SQLite**（本地数据库文件，无需额外配置）
 
 ### 5.3 环境变量配置
 ```
 # Backend (.env)
-DATABASE_URL=postgresql://xxx.supabase.co:5432/postgres
-SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_KEY=your-anon-key
-SECRET_KEY=your-jwt-secret-key
+# 无需额外配置，使用本地 SQLite 数据库
 
 # Frontend (.env.local)
-NEXT_PUBLIC_API_URL=https://your-backend.railway.app
-NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+NEXT_PUBLIC_API_URL=http://10.129.245.117:8000
 ```
 
-## 6. 数据库模型 (Supabase PostgreSQL)
+### 5.4 部署脚本
+项目提供 `deploy-local.sh` 脚本，支持一键部署到 cLab 服务器：
+```bash
+./deploy-local.sh
+```
+该脚本会自动：
+1. 同步代码到远程服务器
+2. 安装依赖
+3. 构建前端
+4. 启动后端和前端服务
+
+## 6. 数据库模型 (SQLite)
 
 ### 6.1 Users 表
-```sql
-CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    name VARCHAR(100),
-    role VARCHAR(20) DEFAULT 'USER' CHECK (role IN ('USER', 'ADMIN', 'SUPER_ADMIN')),
-    avatar_url TEXT,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
+```python
+class User(Base):
+    __tablename__ = "users"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
+    email = Column(String, unique=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    name = Column(String)
+    role = Column(String, default="USER")
+    avatar_url = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 ```
 
 ### 6.2 Bicycles 表
@@ -314,19 +323,23 @@ CREATE TABLE likes (
 - [x] 内存数据库（测试用）
 
 ### Phase 2: 核心功能（本阶段目标）
-- [ ] Supabase 项目创建和数据库配置
-- [ ] 用户认证系统（注册/登录/JWT）
-- [ ] 角色权限系统（User/Admin/SuperAdmin）
-- [ ] 持久化数据层
-- [ ] 前端登录/注册页面
+- [x] SQLite 数据库配置
+- [x] 用户认证系统（注册/登录/JWT）
+- [x] 角色权限系统（User/Admin/SuperAdmin）
+- [x] 持久化数据层
+- [x] 前端登录/注册页面
 
 ### Phase 3: 业务功能
-- [ ] 自行车 CRUD + 审核流程
-- [ ] 预约管理
-- [ ] 论坛功能（帖子/评论/点赞）
-- [ ] 管理后台完善
+- [x] 自行车 CRUD + 审核流程
+- [x] 预约管理
+- [x] 论坛功能（帖子/评论/点赞）
+- [x] 管理后台完善
+- [x] 私信系统
+- [x] 时间段管理
+- [x] 评价系统
 
 ### Phase 4: 部署上线
-- [ ] Vercel 前端部署
-- [ ] Railway/Render 后端部署
-- [ ] 域名绑定（如需要）
+- [x] cLab 服务器部署
+- [x] 前端部署 (http://10.129.245.117:3000)
+- [x] 后端部署 (http://10.129.245.117:8000)
+- [x] 一键部署脚本
